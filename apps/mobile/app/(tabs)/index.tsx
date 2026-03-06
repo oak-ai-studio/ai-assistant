@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   StyleProp,
+  StyleSheet,
   Text,
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -20,8 +19,10 @@ import Animated, {
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
+import { HOME_PAGE_CONTEXT } from '@/constants/page-context';
 import { Badge } from '@/components/ui/Badge';
-import { ChatDrawer } from '@/components/home/ChatDrawer';
+import { TopRightMenu } from '@/components/TopRightMenu';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
 type Reminder = {
   id: string;
@@ -34,12 +35,6 @@ type Skill = {
   name: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   subtitle: string;
-};
-
-type Message = {
-  id: string;
-  role: 'assistant' | 'user';
-  content: string;
 };
 
 const mockReminders: Reminder[] = [
@@ -61,12 +56,6 @@ const mockSkills: Skill[] = [
     icon: 'restaurant-outline',
     subtitle: '今天吃什么？',
   },
-];
-
-const mockMessages: Message[] = [
-  { id: '1', role: 'assistant', content: '你好！有什么我可以帮你的吗？' },
-  { id: '2', role: 'user', content: '今天天气怎么样？' },
-  { id: '3', role: 'assistant', content: '今天天气不错，适合出门走走。' },
 ];
 
 const getGreeting = () => {
@@ -109,15 +98,13 @@ function ScalePressable({
 }
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state, menu, chat } = useLocalSearchParams<{
+  const { state, menu } = useLocalSearchParams<{
     state?: string;
     menu?: string;
-    chat?: string;
   }>();
+  const { openChat, setPageContext } = useGlobalChat();
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [chatVisible, setChatVisible] = useState(false);
 
   const isEmptyState = state === 'empty';
 
@@ -130,35 +117,41 @@ export default function HomeScreen() {
     [isEmptyState]
   );
 
-  const onRouteFromMenu = (route: '/(tabs)/assistant' | '/(tabs)/memory') => {
-    setSettingsVisible(false);
-    router.push(route);
-  };
-
   useEffect(() => {
     setSettingsVisible(menu === 'open');
   }, [menu]);
 
   useEffect(() => {
-    setChatVisible(chat === 'open');
-  }, [chat]);
+    setPageContext(HOME_PAGE_CONTEXT);
+  }, [setPageContext]);
+
+  const onSkillPress = (skillId: Skill['id']) => {
+    if (skillId === 'vocab') {
+      router.push('/(tabs)/vocabulary');
+      return;
+    }
+
+    openChat();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScalePressable
-        style={[
-          styles.settingsButton,
-          { top: insets.top + 16, right: 16 },
+      <TopRightMenu
+        visible={settingsVisible}
+        onVisibleChange={setSettingsVisible}
+        items={[
+          {
+            key: 'assistant',
+            label: '助理',
+            onPress: () => router.push('/(tabs)/assistant'),
+          },
+          {
+            key: 'memory',
+            label: '记忆',
+            onPress: () => router.push('/(tabs)/memory'),
+          },
         ]}
-        onPress={() => setSettingsVisible(true)}
-      >
-        <Ionicons
-          name="settings-outline"
-          size={18}
-          color={colors.ink}
-          style={styles.icon18}
-        />
-      </ScalePressable>
+      />
 
       <View style={styles.inner}>
         <ScrollView
@@ -191,18 +184,11 @@ export default function HomeScreen() {
             {skills.map((skill) => (
               <ScalePressable
                 key={skill.id}
-                style={[
-                  styles.skillCard,
-                  skills.length === 1 && styles.skillCardSingle,
-                ]}
+                style={[styles.skillCard, skills.length === 1 && styles.skillCardSingle]}
+                onPress={() => onSkillPress(skill.id)}
               >
                 <View style={styles.skillIconBox}>
-                  <Ionicons
-                    name={skill.icon}
-                    size={18}
-                    color={colors.ink60}
-                    style={styles.icon18}
-                  />
+                  <Ionicons name={skill.icon} size={18} color={colors.ink60} style={styles.icon18} />
                 </View>
                 <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
                 <Text style={[typography.bodyM, styles.skillSubtitle]}>{skill.subtitle}</Text>
@@ -221,55 +207,6 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </View>
-
-      <ScalePressable
-        style={[
-          styles.fab,
-          { bottom: insets.bottom + 24, right: 24 },
-        ]}
-        onPress={() => setChatVisible(true)}
-      >
-        <Ionicons
-          name="chatbubble-ellipses"
-          size={24}
-          color="#fff"
-          style={styles.icon24}
-        />
-      </ScalePressable>
-
-      <Modal
-        transparent
-        visible={settingsVisible}
-        animationType="fade"
-        onRequestClose={() => setSettingsVisible(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setSettingsVisible(false)}>
-          <View style={styles.menuCard}>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => onRouteFromMenu('/(tabs)/assistant')}
-            >
-              <Text style={[typography.bodyL, styles.menuText]}>助理</Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.menuItem, styles.menuItemBorder]}
-              onPress={() => onRouteFromMenu('/(tabs)/memory')}
-            >
-              <Text style={[typography.bodyL, styles.menuText]}>记忆</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-
-      <ChatDrawer
-        visible={chatVisible}
-        messages={mockMessages}
-        onClose={() => setChatVisible(false)}
-        onCreateConversation={() => {
-          setChatVisible(true);
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -301,18 +238,6 @@ const styles = StyleSheet.create({
   question: {
     color: colors.ink,
     marginTop: 2,
-  },
-  settingsButton: {
-    position: 'absolute',
-    zIndex: 20,
-    width: 36,
-    height: 36,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.ink10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.offWhite,
   },
   reminderCard: {
     backgroundColor: colors.offWhite,
@@ -398,17 +323,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.sandLight,
   },
-  fab: {
-    position: 'absolute',
-    zIndex: 20,
-    width: 52,
-    height: 52,
-    borderRadius: radius.full,
-    backgroundColor: colors.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.orange,
-  },
   icon12: {
     lineHeight: 12,
     textAlignVertical: 'center',
@@ -418,37 +332,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlignVertical: 'center',
     includeFontPadding: false,
-  },
-  icon24: {
-    lineHeight: 24,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(26,24,20,0.12)',
-    paddingTop: 100,
-    paddingRight: 24,
-    alignItems: 'flex-end',
-  },
-  menuCard: {
-    width: 132,
-    backgroundColor: colors.offWhite,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.ink10,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  menuItem: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  menuItemBorder: {
-    borderTopWidth: 1,
-    borderTopColor: colors.ink10,
-  },
-  menuText: {
-    color: colors.ink,
   },
 });
