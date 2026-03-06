@@ -165,6 +165,16 @@ export default function HomeScreen() {
       return;
     }
 
+    if (skillId === 'chat') {
+      openChat();
+      return;
+    }
+
+    if (skillId === 'cooking') {
+      router.push('/(tabs)/cooking' as never);
+      return;
+    }
+
     openChat();
   };
 
