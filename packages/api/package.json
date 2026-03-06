@@ -1,0 +1,18 @@
+{
+  "name": "@ai-assistant/api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@ai-assistant/db": "*",
+    "@ai-assistant/shared": "*",
+    "@trpc/server": "^11.11.0",
+    "zod": "^4.3.6"
+  }
+}

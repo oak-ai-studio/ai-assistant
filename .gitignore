@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.turbo/
 .pnp
 .pnp.js
 
@@ -29,6 +30,7 @@ yarn-error.log*
 # Expo
 .expo/
 .expo-shared/
+apps/mobile/web-build/
 
 # Prisma
 packages/db/prisma/migrations/
