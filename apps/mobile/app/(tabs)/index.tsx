@@ -3,8 +3,8 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   StyleProp,
+  StyleSheet,
   Text,
   View,
   ViewStyle,
@@ -20,7 +20,10 @@ import Animated, {
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
+import { HOME_PAGE_CONTEXT } from '@/constants/page-context';
 import { Badge } from '@/components/ui/Badge';
+import { TopRightMenu } from '@/components/TopRightMenu';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 import { ChatDrawer } from '@/components/home/ChatDrawer';
 
 type Reminder = {
@@ -54,7 +57,12 @@ const mockSkills: Skill[] = [
     icon: 'chatbubble-ellipses-outline',
     subtitle: '和我聊聊天吧',
   },
-  { id: 'vocab', name: '背单词', icon: 'book-outline', subtitle: '今天还差 5 个单词' },
+  {
+    id: 'vocab',
+    name: '背单词',
+    icon: 'book-outline',
+    subtitle: '今天还差 5 个单词',
+  },
   {
     id: 'cooking',
     name: '做饭助理',
@@ -115,7 +123,10 @@ export default function HomeScreen() {
     menu?: string;
     chat?: string;
   }>();
+  const { openChat, setPageContext } = useGlobalChat();
+
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [legacyMenuVisible, setLegacyMenuVisible] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
 
   const isEmptyState = state === 'empty';
@@ -131,19 +142,51 @@ export default function HomeScreen() {
 
   const onRouteFromMenu = (route: '/(tabs)/assistant' | '/(tabs)/memory') => {
     setSettingsVisible(false);
+    setLegacyMenuVisible(false);
     router.push(route);
   };
 
   useEffect(() => {
     setSettingsVisible(menu === 'open');
+    setLegacyMenuVisible(menu === 'legacy');
   }, [menu]);
+
+  useEffect(() => {
+    setPageContext(HOME_PAGE_CONTEXT);
+  }, [setPageContext]);
 
   useEffect(() => {
     setChatVisible(chat === 'open');
   }, [chat]);
 
+  const onSkillPress = (skillId: Skill['id']) => {
+    if (skillId === 'vocab') {
+      router.push('/(tabs)/vocabulary' as never);
+      return;
+    }
+
+    openChat();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      <TopRightMenu
+        visible={settingsVisible}
+        onVisibleChange={setSettingsVisible}
+        items={[
+          {
+            key: 'assistant',
+            label: '助理',
+            onPress: () => onRouteFromMenu('/(tabs)/assistant'),
+          },
+          {
+            key: 'memory',
+            label: '记忆',
+            onPress: () => onRouteFromMenu('/(tabs)/memory'),
+          },
+        ]}
+      />
+
       <View style={styles.inner}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -154,13 +197,6 @@ export default function HomeScreen() {
               <Text style={[typography.titleL, styles.greeting]}>{getGreeting()}</Text>
               <Text style={[typography.titleL, styles.question]}>有什么需要？</Text>
             </View>
-
-            <ScalePressable
-              style={styles.settingsButton}
-              onPress={() => setSettingsVisible(true)}
-            >
-              <Ionicons name="settings-outline" size={18} color={colors.ink} />
-            </ScalePressable>
           </View>
 
           <View style={styles.reminderCard}>
@@ -182,40 +218,37 @@ export default function HomeScreen() {
             {skills.map((skill) => (
               <ScalePressable
                 key={skill.id}
-                style={[
-                  styles.skillCard,
-                  skills.length === 1 && styles.skillCardSingle,
-                ]}
+                style={[styles.skillCard, skills.length === 1 && styles.skillCardSingle]}
+                onPress={() => onSkillPress(skill.id)}
               >
                 <View style={styles.skillIconBox}>
-                  <Ionicons name={skill.icon} size={18} color={colors.ink60} />
+                  <Ionicons name={skill.icon} size={18} color={colors.ink60} style={styles.icon18} />
                 </View>
                 <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
                 <Text style={[typography.bodyM, styles.skillSubtitle]}>{skill.subtitle}</Text>
                 <View style={styles.skillDot}>
-                  <Ionicons
-                    name="chatbubble-ellipses-outline"
-                    size={12}
-                    color={colors.ink60}
-                  />
+                  <View style={styles.skillDotCircle}>
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={12}
+                      color={colors.ink60}
+                      style={styles.icon12}
+                    />
+                  </View>
                 </View>
               </ScalePressable>
             ))}
           </View>
         </ScrollView>
-
-        <ScalePressable style={styles.fab} onPress={() => setChatVisible(true)}>
-          <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
-        </ScalePressable>
       </View>
 
       <Modal
         transparent
-        visible={settingsVisible}
+        visible={legacyMenuVisible}
         animationType="fade"
-        onRequestClose={() => setSettingsVisible(false)}
+        onRequestClose={() => setLegacyMenuVisible(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setSettingsVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setLegacyMenuVisible(false)}>
           <View style={styles.menuCard}>
             <Pressable
               style={styles.menuItem}
@@ -238,9 +271,7 @@ export default function HomeScreen() {
         visible={chatVisible}
         messages={mockMessages}
         onClose={() => setChatVisible(false)}
-        onCreateConversation={() => {
-          setChatVisible(true);
-        }}
+        onCreateConversation={() => setChatVisible(true)}
       />
     </SafeAreaView>
   );
@@ -264,9 +295,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   greetingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    marginTop: 16,
     marginBottom: 8,
   },
   greeting: {
@@ -275,16 +304,6 @@ const styles = StyleSheet.create({
   question: {
     color: colors.ink,
     marginTop: 2,
-  },
-  settingsButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.ink10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.offWhite,
   },
   reminderCard: {
     backgroundColor: colors.offWhite,
@@ -325,6 +344,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
     minHeight: 118,
+    justifyContent: 'center',
     ...shadows.sm,
   },
   skillCardSingle: {
@@ -344,15 +364,22 @@ const styles = StyleSheet.create({
   skillTitle: {
     color: colors.ink,
     marginBottom: 4,
+    paddingRight: 36,
   },
   skillSubtitle: {
     color: colors.ink60,
-    paddingRight: 18,
+    paddingRight: 36,
   },
   skillDot: {
     position: 'absolute',
     right: 12,
-    bottom: 12,
+    top: 0,
+    bottom: 0,
+    width: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skillDotCircle: {
     width: 24,
     height: 24,
     borderRadius: radius.full,
@@ -362,17 +389,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.sandLight,
   },
-  fab: {
-    position: 'absolute',
-    right: 24,
-    bottom: 26,
-    width: 52,
-    height: 52,
-    borderRadius: radius.full,
-    backgroundColor: colors.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.orange,
+  icon12: {
+    lineHeight: 12,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  icon18: {
+    lineHeight: 18,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   modalBackdrop: {
     flex: 1,
