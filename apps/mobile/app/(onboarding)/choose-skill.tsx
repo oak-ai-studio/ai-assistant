@@ -126,11 +126,16 @@ export default function ChooseSkillScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100 }}
           style={styles.content}
         >
+          {/* Avatar */}
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>助</Text>
+          </View>
+
           <Text style={[typography.titleL, styles.title]}>
-            选择你的第一个技能
+            他/她能帮你做什么？
           </Text>
           <Text style={[typography.bodyM, styles.subtitle]}>
-            可以多选，之后也可以随时添加
+            作为你的私人助手，你有意愿尝试哪些技能？
           </Text>
 
           <View style={styles.skillList}>
@@ -164,7 +169,7 @@ export default function ChooseSkillScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 360 }}
         >
           <Button onPress={handleNext} disabled={selected.length === 0}>
-            下一步
+            下一项（2/{selected.length + 3}）
           </Button>
         </MotiView>
       </View>
@@ -180,12 +185,26 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 48,
     paddingBottom: 32,
     justifyContent: 'space-between',
   },
   content: {
     flex: 1,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    backgroundColor: colors.orange,
+    borderRadius: radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  avatarText: {
+    fontFamily: 'Syne_800ExtraBold',
+    fontSize: 26,
+    color: '#fff',
   },
   title: {
     color: colors.ink,

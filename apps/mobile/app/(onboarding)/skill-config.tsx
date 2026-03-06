@@ -22,13 +22,13 @@ interface SkillConfig {
 const SKILL_CONFIGS: Record<string, SkillConfig> = {
   vocab: {
     title: '背单词',
-    question: '你希望以什么方式记忆单词？',
-    options: ['通过场景例句', '填空练习', '词语翻译'],
+    question: '多久和你背一次单词？',
+    options: ['每天', '每周', '自定义...'],
   },
   cooking: {
     title: '做饭助理',
-    question: '你平时的烹饪水平是？',
-    options: ['新手入门', '会做基础家常菜', '有一定经验'],
+    question: '提醒你购买食材？',
+    options: ['是', '否'],
   },
   chat: {
     title: '随便聊聊',
@@ -98,11 +98,27 @@ export default function SkillConfigScreen() {
   const total = skillList.length;
   const isLast = currentIndex === total - 1;
 
-  const handleAdvance = () => {
+  // Step numbering: name=1, skill-select=2, configs start at 3
+  const totalSteps = total + 3; // name(1) + skill-select(2) + configs + confirm
+  const currentStep = currentIndex + 3;
+
+  const handleNext = () => {
     if (isLast) {
-      router.replace('/');
+      router.push({
+        pathname: '/(onboarding)/confirm',
+        params: { skills },
+      });
     } else {
       setCurrentIndex((prev) => prev + 1);
+      setSelectedOption(null);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentIndex === 0) {
+      router.back();
+    } else {
+      setCurrentIndex((prev) => prev - 1);
       setSelectedOption(null);
     }
   };
@@ -135,14 +151,19 @@ export default function SkillConfigScreen() {
           transition={{ type: 'spring', damping: 22, stiffness: 120 }}
           style={styles.content}
         >
-          {/* Step counter */}
-          <Text style={[typography.mono, styles.stepCounter]}>
-            {currentIndex + 1} / {total} · {currentConfig.title}
+          {/* Avatar */}
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>助</Text>
+          </View>
+
+          {/* Skill title */}
+          <Text style={[typography.mono, styles.skillLabel]}>
+            完善技能 · {currentConfig.title}
           </Text>
 
           {/* Question */}
           <Text style={[typography.titleL, styles.question]}>
-            {currentConfig.question}
+            1. {currentConfig.question}
           </Text>
 
           {/* Options */}
@@ -170,17 +191,13 @@ export default function SkillConfigScreen() {
         </MotiView>
 
         {/* Bottom actions */}
-        <View style={styles.buttonRow}>
-          <View style={styles.buttonWrap}>
-            <Button variant="ghost" onPress={handleAdvance}>
-              跳过
-            </Button>
-          </View>
-          <View style={styles.buttonWrap}>
-            <Button onPress={handleAdvance}>
-              {isLast ? '完成' : '下一步'}
-            </Button>
-          </View>
+        <View style={styles.buttonSection}>
+          <Button onPress={handleNext}>
+            {isLast ? `下一项（${currentStep}/${totalSteps}）` : `下一项（${currentStep}/${totalSteps}）`}
+          </Button>
+          <Button variant="ghost" onPress={handleBack}>
+            上一项
+          </Button>
         </View>
       </View>
     </SafeAreaView>
@@ -201,7 +218,7 @@ const styles = StyleSheet.create({
   progressBar: {
     flexDirection: 'row',
     gap: 6,
-    marginBottom: 40,
+    marginBottom: 32,
   },
   progressSegment: {
     flex: 1,
@@ -215,13 +232,27 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  stepCounter: {
+  avatar: {
+    width: 64,
+    height: 64,
+    backgroundColor: colors.orange,
+    borderRadius: radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  avatarText: {
+    fontFamily: 'Syne_800ExtraBold',
+    fontSize: 26,
+    color: '#fff',
+  },
+  skillLabel: {
     color: colors.ink60,
     marginBottom: 12,
   },
   question: {
     color: colors.ink,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   optionList: {
     gap: 10,
@@ -254,11 +285,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'DMSans_500Medium',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  buttonWrap: {
-    flex: 1,
+  buttonSection: {
+    gap: 10,
   },
 });

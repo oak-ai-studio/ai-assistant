@@ -1,16 +1,24 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { MotiView } from 'moti';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { colors } from '@/constants/tokens';
+import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
+
+function AssistantAvatar() {
+  return (
+    <View style={styles.avatar}>
+      <Text style={styles.avatarText}>助</Text>
+    </View>
+  );
+}
 
 export default function NameScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [role, setRole] = useState('');
 
   const handleNext = () => {
     router.push('/(onboarding)/choose-skill');
@@ -18,46 +26,60 @@ export default function NameScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <MotiView
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-          style={styles.content}
         >
+          <AssistantAvatar />
+
           <Text style={[typography.titleL, styles.title]}>
-            给你的助理起个名字
-          </Text>
-          <Text style={[typography.bodyM, styles.hint]}>
-            起一个你喜欢的名字，之后也可以修改
+            给助理起个名字？
           </Text>
 
-          <Input
-            label="名字"
-            placeholder="小助"
-            value={name}
-            onChangeText={setName}
-          />
+          {/* 称呼 */}
+          <View style={styles.fieldGroup}>
+            <Text style={[typography.mono, styles.fieldLabel]}>称呼</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="安迪"
+              placeholderTextColor={colors.ink30}
+              style={styles.input}
+            />
+          </View>
+
+          {/* 角色 */}
+          <View style={styles.fieldGroup}>
+            <Text style={[typography.mono, styles.fieldLabel]}>角色</Text>
+            <TextInput
+              value={role}
+              onChangeText={setRole}
+              placeholder="你是我的全能助理，了解我的喜好，帮我管理日常事务..."
+              placeholderTextColor={colors.ink30}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              style={[styles.input, styles.textarea]}
+            />
+          </View>
         </MotiView>
 
         <MotiView
           from={{ opacity: 0, translateY: 12 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 160 }}
-          style={styles.buttonRow}
+          style={styles.buttonSection}
         >
-          <View style={styles.buttonWrap}>
-            <Button variant="ghost" onPress={handleNext}>
-              跳过
-            </Button>
-          </View>
-          <View style={styles.buttonWrap}>
-            <Button onPress={handleNext}>
-              下一步
-            </Button>
-          </View>
+          <Button onPress={handleNext}>下一项（1/2）</Button>
+          <Button variant="ghost" onPress={handleNext}>跳过</Button>
         </MotiView>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -67,30 +89,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.sand,
   },
-  inner: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 48,
     paddingBottom: 32,
     justifyContent: 'space-between',
   },
-  content: {
-    flex: 1,
-    gap: 8,
+  avatar: {
+    width: 64,
+    height: 64,
+    backgroundColor: colors.orange,
+    borderRadius: radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 28,
+  },
+  avatarText: {
+    fontFamily: 'Syne_800ExtraBold',
+    fontSize: 26,
+    color: '#fff',
   },
   title: {
     color: colors.ink,
-    marginBottom: 8,
+    marginBottom: 28,
   },
-  hint: {
+  fieldGroup: {
+    marginBottom: 20,
+    gap: 6,
+  },
+  fieldLabel: {
     color: colors.ink60,
-    marginBottom: 24,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
+  input: {
+    backgroundColor: colors.sandLight,
+    borderWidth: 1.5,
+    borderColor: colors.ink10,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 14,
+    color: colors.ink,
   },
-  buttonWrap: {
-    flex: 1,
+  textarea: {
+    height: 100,
+    paddingTop: 11,
+  },
+  buttonSection: {
+    gap: 10,
+    marginTop: 32,
   },
 });
