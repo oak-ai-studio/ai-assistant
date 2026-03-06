@@ -104,7 +104,7 @@ export default function SkillConfigScreen() {
 
   const handleNext = () => {
     if (isLast) {
-      router.replace('/(tabs)');
+      router.push('./skill-confirm');
     } else {
       setCurrentIndex((prev) => prev + 1);
       setSelectedOption(null);
