@@ -159,7 +159,12 @@ export default function HomeScreen() {
               style={styles.settingsButton}
               onPress={() => setSettingsVisible(true)}
             >
-              <Ionicons name="settings-outline" size={18} color={colors.ink} />
+              <Ionicons
+                name="settings-outline"
+                size={18}
+                color={colors.ink}
+                style={styles.icon18}
+              />
             </ScalePressable>
           </View>
 
@@ -188,7 +193,12 @@ export default function HomeScreen() {
                 ]}
               >
                 <View style={styles.skillIconBox}>
-                  <Ionicons name={skill.icon} size={18} color={colors.ink60} />
+                  <Ionicons
+                    name={skill.icon}
+                    size={18}
+                    color={colors.ink60}
+                    style={styles.icon18}
+                  />
                 </View>
                 <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
                 <Text style={[typography.bodyM, styles.skillSubtitle]}>{skill.subtitle}</Text>
@@ -197,6 +207,7 @@ export default function HomeScreen() {
                     name="chatbubble-ellipses-outline"
                     size={12}
                     color={colors.ink60}
+                    style={styles.icon12}
                   />
                 </View>
               </ScalePressable>
@@ -205,7 +216,12 @@ export default function HomeScreen() {
         </ScrollView>
 
         <ScalePressable style={styles.fab} onPress={() => setChatVisible(true)}>
-          <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
+          <Ionicons
+            name="chatbubble-ellipses"
+            size={24}
+            color="#fff"
+            style={styles.icon24}
+          />
         </ScalePressable>
       </View>
 
@@ -325,6 +341,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
     minHeight: 118,
+    justifyContent: 'center',
     ...shadows.sm,
   },
   skillCardSingle: {
@@ -344,15 +361,17 @@ const styles = StyleSheet.create({
   skillTitle: {
     color: colors.ink,
     marginBottom: 4,
+    paddingRight: 36,
   },
   skillSubtitle: {
     color: colors.ink60,
-    paddingRight: 18,
+    paddingRight: 36,
   },
   skillDot: {
     position: 'absolute',
     right: 12,
-    bottom: 12,
+    top: '50%',
+    marginTop: -12,
     width: 24,
     height: 24,
     borderRadius: radius.full,
@@ -365,7 +384,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 24,
-    bottom: 26,
+    bottom: 24,
     width: 52,
     height: 52,
     borderRadius: radius.full,
@@ -373,6 +392,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.orange,
+  },
+  icon12: {
+    lineHeight: 12,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  icon18: {
+    lineHeight: 18,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  icon24: {
+    lineHeight: 24,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   modalBackdrop: {
     flex: 1,
