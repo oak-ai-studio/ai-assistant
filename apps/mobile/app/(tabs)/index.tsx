@@ -145,6 +145,18 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
+        <ScalePressable
+          style={styles.settingsButton}
+          onPress={() => setSettingsVisible(true)}
+        >
+          <Ionicons
+            name="settings-outline"
+            size={18}
+            color={colors.ink}
+            style={styles.icon18}
+          />
+        </ScalePressable>
+
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -154,18 +166,6 @@ export default function HomeScreen() {
               <Text style={[typography.titleL, styles.greeting]}>{getGreeting()}</Text>
               <Text style={[typography.titleL, styles.question]}>有什么需要？</Text>
             </View>
-
-            <ScalePressable
-              style={styles.settingsButton}
-              onPress={() => setSettingsVisible(true)}
-            >
-              <Ionicons
-                name="settings-outline"
-                size={18}
-                color={colors.ink}
-                style={styles.icon18}
-              />
-            </ScalePressable>
           </View>
 
           <View style={styles.reminderCard}>
@@ -203,12 +203,14 @@ export default function HomeScreen() {
                 <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
                 <Text style={[typography.bodyM, styles.skillSubtitle]}>{skill.subtitle}</Text>
                 <View style={styles.skillDot}>
-                  <Ionicons
-                    name="chatbubble-ellipses-outline"
-                    size={12}
-                    color={colors.ink60}
-                    style={styles.icon12}
-                  />
+                  <View style={styles.skillDotCircle}>
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={12}
+                      color={colors.ink60}
+                      style={styles.icon12}
+                    />
+                  </View>
                 </View>
               </ScalePressable>
             ))}
@@ -274,15 +276,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
+    position: 'relative',
   },
   scrollContent: {
     paddingBottom: 120,
     gap: 14,
   },
   greetingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    marginTop: 16,
     marginBottom: 8,
   },
   greeting: {
@@ -293,6 +294,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   settingsButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
     width: 36,
     height: 36,
     borderRadius: radius.full,
@@ -370,8 +375,12 @@ const styles = StyleSheet.create({
   skillDot: {
     position: 'absolute',
     right: 12,
-    top: '50%',
-    marginTop: -12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skillDotCircle: {
     width: 24,
     height: 24,
     borderRadius: radius.full,
