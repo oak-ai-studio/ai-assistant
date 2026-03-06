@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleProp,
@@ -23,6 +24,7 @@ import { HOME_PAGE_CONTEXT } from '@/constants/page-context';
 import { Badge } from '@/components/ui/Badge';
 import { TopRightMenu } from '@/components/TopRightMenu';
 import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
+import { ChatDrawer } from '@/components/home/ChatDrawer';
 
 type Reminder = {
   id: string;
@@ -37,6 +39,12 @@ type Skill = {
   subtitle: string;
 };
 
+type Message = {
+  id: string;
+  role: 'assistant' | 'user';
+  content: string;
+};
+
 const mockReminders: Reminder[] = [
   { id: '1', text: '今天还差 5 个单词就完成目标了', tag: '背单词' },
   { id: '2', text: '你已经连续学习 7 天了，继续加油！', tag: '做饭' },
@@ -49,13 +57,24 @@ const mockSkills: Skill[] = [
     icon: 'chatbubble-ellipses-outline',
     subtitle: '和我聊聊天吧',
   },
-  { id: 'vocab', name: '背单词', icon: 'book-outline', subtitle: '今天还差 5 个单词' },
+  {
+    id: 'vocab',
+    name: '背单词',
+    icon: 'book-outline',
+    subtitle: '今天还差 5 个单词',
+  },
   {
     id: 'cooking',
     name: '做饭助理',
     icon: 'restaurant-outline',
     subtitle: '今天吃什么？',
   },
+];
+
+const mockMessages: Message[] = [
+  { id: '1', role: 'assistant', content: '你好！有什么我可以帮你的吗？' },
+  { id: '2', role: 'user', content: '今天天气怎么样？' },
+  { id: '3', role: 'assistant', content: '今天天气不错，适合出门走走。' },
 ];
 
 const getGreeting = () => {
@@ -99,12 +118,16 @@ function ScalePressable({
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { state, menu } = useLocalSearchParams<{
+  const { state, menu, chat } = useLocalSearchParams<{
     state?: string;
     menu?: string;
+    chat?: string;
   }>();
   const { openChat, setPageContext } = useGlobalChat();
+
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [legacyMenuVisible, setLegacyMenuVisible] = useState(false);
+  const [chatVisible, setChatVisible] = useState(false);
 
   const isEmptyState = state === 'empty';
 
@@ -117,17 +140,28 @@ export default function HomeScreen() {
     [isEmptyState]
   );
 
+  const onRouteFromMenu = (route: '/(tabs)/assistant' | '/(tabs)/memory') => {
+    setSettingsVisible(false);
+    setLegacyMenuVisible(false);
+    router.push(route);
+  };
+
   useEffect(() => {
     setSettingsVisible(menu === 'open');
+    setLegacyMenuVisible(menu === 'legacy');
   }, [menu]);
 
   useEffect(() => {
     setPageContext(HOME_PAGE_CONTEXT);
   }, [setPageContext]);
 
+  useEffect(() => {
+    setChatVisible(chat === 'open');
+  }, [chat]);
+
   const onSkillPress = (skillId: Skill['id']) => {
     if (skillId === 'vocab') {
-      router.push('/(tabs)/vocabulary');
+      router.push('/(tabs)/vocabulary' as never);
       return;
     }
 
@@ -143,12 +177,12 @@ export default function HomeScreen() {
           {
             key: 'assistant',
             label: '助理',
-            onPress: () => router.push('/(tabs)/assistant'),
+            onPress: () => onRouteFromMenu('/(tabs)/assistant'),
           },
           {
             key: 'memory',
             label: '记忆',
-            onPress: () => router.push('/(tabs)/memory'),
+            onPress: () => onRouteFromMenu('/(tabs)/memory'),
           },
         ]}
       />
@@ -207,6 +241,38 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </View>
+
+      <Modal
+        transparent
+        visible={legacyMenuVisible}
+        animationType="fade"
+        onRequestClose={() => setLegacyMenuVisible(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setLegacyMenuVisible(false)}>
+          <View style={styles.menuCard}>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => onRouteFromMenu('/(tabs)/assistant')}
+            >
+              <Text style={[typography.bodyL, styles.menuText]}>助理</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.menuItem, styles.menuItemBorder]}
+              onPress={() => onRouteFromMenu('/(tabs)/memory')}
+            >
+              <Text style={[typography.bodyL, styles.menuText]}>记忆</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <ChatDrawer
+        visible={chatVisible}
+        messages={mockMessages}
+        onClose={() => setChatVisible(false)}
+        onCreateConversation={() => setChatVisible(true)}
+      />
     </SafeAreaView>
   );
 }
@@ -332,5 +398,32 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlignVertical: 'center',
     includeFontPadding: false,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(26,24,20,0.12)',
+    paddingTop: 100,
+    paddingRight: 24,
+    alignItems: 'flex-end',
+  },
+  menuCard: {
+    width: 132,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  menuItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  menuItemBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.ink10,
+  },
+  menuText: {
+    color: colors.ink,
   },
 });

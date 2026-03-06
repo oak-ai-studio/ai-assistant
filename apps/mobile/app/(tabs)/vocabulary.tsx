@@ -103,13 +103,13 @@ export function VocabularyScreen({ initialChatPreset }: VocabularyScreenProps) {
           {
             key: 'settings',
             label: '配置',
-            onPress: () => router.push('/(skills)/vocabulary/settings'),
+            onPress: () => router.push('/(skills)/vocabulary/settings' as never),
           },
           {
             key: 'disable',
             label: '停用技能',
             destructive: true,
-            onPress: () => router.push('/(skills)/vocabulary/settings?disable=confirm'),
+            onPress: () => router.push('/(skills)/vocabulary/settings?disable=confirm' as never),
           },
         ]}
       />

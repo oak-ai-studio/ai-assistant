@@ -53,7 +53,7 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
     getPageContextForPathname(pathname)
   );
 
-  const rootSegment = segments[0];
+  const rootSegment = (segments[0] ?? '') as string;
   const shouldShowGlobalChat = rootSegment === '(tabs)' || rootSegment === '(skills)';
 
   useEffect(() => {
