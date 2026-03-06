@@ -235,7 +235,13 @@ export default function HomeScreen() {
                   <Ionicons name={skill.icon} size={18} color={colors.ink60} style={styles.icon18} />
                 </View>
                 <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
-                <Text style={[typography.bodyM, styles.skillSubtitle]}>{skill.subtitle}</Text>
+                <Text
+                  style={[typography.bodyM, styles.skillSubtitle]}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {skill.subtitle}
+                </Text>
                 <View style={styles.skillDot}>
                   <View style={styles.skillDotCircle}>
                     <Ionicons
@@ -353,8 +359,8 @@ const styles = StyleSheet.create({
     borderColor: colors.ink10,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    minHeight: 118,
-    justifyContent: 'center',
+    height: 128,
+    justifyContent: 'flex-start',
     ...shadows.sm,
   },
   skillCardSingle: {
