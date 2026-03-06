@@ -1,33 +1,247 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  StyleProp,
+  Text,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MotiView } from 'moti';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
+import { shadows } from '@/constants/shadows';
+import { Badge } from '@/components/ui/Badge';
+import { ChatDrawer } from '@/components/home/ChatDrawer';
+
+type Reminder = {
+  id: string;
+  text: string;
+  tag: string;
+};
+
+type Skill = {
+  id: string;
+  name: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  subtitle: string;
+};
+
+type Message = {
+  id: string;
+  role: 'assistant' | 'user';
+  content: string;
+};
+
+const mockReminders: Reminder[] = [
+  { id: '1', text: '今天还差 5 个单词就完成目标了', tag: '背单词' },
+  { id: '2', text: '你已经连续学习 7 天了，继续加油！', tag: '做饭' },
+];
+
+const mockSkills: Skill[] = [
+  {
+    id: 'chat',
+    name: '随便聊聊',
+    icon: 'chatbubble-ellipses-outline',
+    subtitle: '和我聊聊天吧',
+  },
+  { id: 'vocab', name: '背单词', icon: 'book-outline', subtitle: '今天还差 5 个单词' },
+  {
+    id: 'cooking',
+    name: '做饭助理',
+    icon: 'restaurant-outline',
+    subtitle: '今天吃什么？',
+  },
+];
+
+const mockMessages: Message[] = [
+  { id: '1', role: 'assistant', content: '你好！有什么我可以帮你的吗？' },
+  { id: '2', role: 'user', content: '今天天气怎么样？' },
+  { id: '3', role: 'assistant', content: '今天天气不错，适合出门走走。' },
+];
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return '上午好～';
+  if (hour < 18) return '下午好～';
+  return '晚上好～';
+};
+
+function ScalePressable({
+  onPress,
+  style,
+  children,
+}: {
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      style={style}
+      onPressIn={() => {
+        scale.value = withSpring(0.96, { damping: 20, stiffness: 320 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 20, stiffness: 220 });
+      }}
+      onPress={onPress}
+    >
+      <Animated.View style={[animatedStyle, styles.scaledContent]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { state, menu, chat } = useLocalSearchParams<{
+    state?: string;
+    menu?: string;
+    chat?: string;
+  }>();
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [chatVisible, setChatVisible] = useState(false);
+
+  const isEmptyState = state === 'empty';
+
+  const reminders = useMemo(
+    () => (isEmptyState ? [] : mockReminders).slice(0, 3),
+    [isEmptyState]
+  );
+  const skills = useMemo(
+    () => (isEmptyState ? mockSkills.filter((skill) => skill.id === 'chat') : mockSkills),
+    [isEmptyState]
+  );
+
+  const onRouteFromMenu = (route: '/(tabs)/assistant' | '/(tabs)/memory') => {
+    setSettingsVisible(false);
+    router.push(route);
+  };
+
+  useEffect(() => {
+    setSettingsVisible(menu === 'open');
+  }, [menu]);
+
+  useEffect(() => {
+    setChatVisible(chat === 'open');
+  }, [chat]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
-        <MotiView
-          from={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-          style={styles.avatar}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.avatarText}>助</Text>
-        </MotiView>
+          <View style={styles.greetingRow}>
+            <View>
+              <Text style={[typography.titleL, styles.greeting]}>{getGreeting()}</Text>
+              <Text style={[typography.titleL, styles.question]}>有什么需要？</Text>
+            </View>
 
-        <MotiView
-          from={{ opacity: 0, translateY: 16 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 120 }}
-        >
-          <Text style={[typography.display, styles.title]}>AI 小助理</Text>
-          <Text style={[typography.bodyL, styles.subtitle]}>
-            你的智能助手已就绪
-          </Text>
-        </MotiView>
+            <ScalePressable
+              style={styles.settingsButton}
+              onPress={() => setSettingsVisible(true)}
+            >
+              <Ionicons name="settings-outline" size={18} color={colors.ink} />
+            </ScalePressable>
+          </View>
+
+          <View style={styles.reminderCard}>
+            {reminders.length === 0 ? (
+              <Text style={[typography.bodyL, styles.emptyReminderText]}>无提醒</Text>
+            ) : (
+              reminders.map((reminder, index) => (
+                <View key={reminder.id} style={styles.reminderItem}>
+                  <Text style={[typography.bodyL, styles.reminderText]}>
+                    {index + 1}. {reminder.text}
+                  </Text>
+                  <Badge variant="orange">{reminder.tag}</Badge>
+                </View>
+              ))
+            )}
+          </View>
+
+          <View style={styles.skillGrid}>
+            {skills.map((skill) => (
+              <ScalePressable
+                key={skill.id}
+                style={[
+                  styles.skillCard,
+                  skills.length === 1 && styles.skillCardSingle,
+                ]}
+              >
+                <View style={styles.skillIconBox}>
+                  <Ionicons name={skill.icon} size={18} color={colors.ink60} />
+                </View>
+                <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
+                <Text style={[typography.bodyM, styles.skillSubtitle]}>{skill.subtitle}</Text>
+                <View style={styles.skillDot}>
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={12}
+                    color={colors.ink60}
+                  />
+                </View>
+              </ScalePressable>
+            ))}
+          </View>
+        </ScrollView>
+
+        <ScalePressable style={styles.fab} onPress={() => setChatVisible(true)}>
+          <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
+        </ScalePressable>
       </View>
+
+      <Modal
+        transparent
+        visible={settingsVisible}
+        animationType="fade"
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setSettingsVisible(false)}>
+          <View style={styles.menuCard}>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => onRouteFromMenu('/(tabs)/assistant')}
+            >
+              <Text style={[typography.bodyL, styles.menuText]}>助理</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.menuItem, styles.menuItemBorder]}
+              onPress={() => onRouteFromMenu('/(tabs)/memory')}
+            >
+              <Text style={[typography.bodyL, styles.menuText]}>记忆</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <ChatDrawer
+        visible={chatVisible}
+        messages={mockMessages}
+        onClose={() => setChatVisible(false)}
+        onCreateConversation={() => {
+          setChatVisible(true);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -37,33 +251,154 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.sand,
   },
+  scaledContent: {
+    flex: 1,
+  },
   inner: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingTop: 8,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    backgroundColor: colors.orange,
-    borderRadius: radius.xl,
+  scrollContent: {
+    paddingBottom: 120,
+    gap: 14,
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  greeting: {
+    color: colors.ink,
+  },
+  question: {
+    color: colors.ink,
+    marginTop: 2,
+  },
+  settingsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.ink10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 28,
+    backgroundColor: colors.offWhite,
   },
-  avatarText: {
-    fontFamily: 'Syne_800ExtraBold',
-    fontSize: 34,
-    color: '#fff',
+  reminderCard: {
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    minHeight: 124,
+    justifyContent: 'center',
+    ...shadows.sm,
   },
-  title: {
-    color: colors.orange,
-    textAlign: 'center',
-    marginBottom: 12,
+  reminderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 10,
   },
-  subtitle: {
+  reminderText: {
+    color: colors.ink,
+    flex: 1,
+  },
+  emptyReminderText: {
     color: colors.ink60,
-    textAlign: 'center',
+  },
+  skillGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  skillCard: {
+    width: '48%',
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    minHeight: 118,
+    ...shadows.sm,
+  },
+  skillCardSingle: {
+    width: '100%',
+  },
+  skillIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.sandLight,
+    marginBottom: 10,
+  },
+  skillTitle: {
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  skillSubtitle: {
+    color: colors.ink60,
+    paddingRight: 18,
+  },
+  skillDot: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    width: 24,
+    height: 24,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.ink30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.sandLight,
+  },
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 26,
+    width: 52,
+    height: 52,
+    borderRadius: radius.full,
+    backgroundColor: colors.orange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.orange,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(26,24,20,0.12)',
+    paddingTop: 100,
+    paddingRight: 24,
+    alignItems: 'flex-end',
+  },
+  menuCard: {
+    width: 132,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  menuItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  menuItemBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.ink10,
+  },
+  menuText: {
+    color: colors.ink,
   },
 });
