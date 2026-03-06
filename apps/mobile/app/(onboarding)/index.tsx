@@ -6,42 +6,39 @@ import { Button } from '@/components/ui/Button';
 import { colors } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 
-export default function WelcomeScreen() {
+export default function LandingScreen() {
   const router = useRouter();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
-        {/* Main content */}
         <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 100 }}
           style={styles.content}
         >
-          <Text style={[typography.display, styles.title]}>
-            AI小助理
-          </Text>
-          <Text style={[typography.bodyL, styles.subtitle]}>
-            一个真懂你的朋友
-          </Text>
+          <Text style={[typography.display, styles.title]}>AI小助理</Text>
+          <Text style={[typography.bodyL, styles.subtitle]}>一个真懂你的朋友</Text>
         </MotiView>
 
-        {/* Bottom actions */}
         <MotiView
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 320 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 300 }}
           style={styles.actions}
         >
           <View style={styles.buttonRow}>
             <View style={styles.buttonWrap}>
-              <Button onPress={() => router.push('/(onboarding)/name')}>
+              <Button onPress={() => router.push('/(onboarding)/login')}>
                 登录
               </Button>
             </View>
             <View style={styles.buttonWrap}>
-              <Button variant="secondary" onPress={() => router.push('/(onboarding)/name')}>
+              <Button
+                variant="secondary"
+                onPress={() => router.push('/(onboarding)/register')}
+              >
                 注册
               </Button>
             </View>

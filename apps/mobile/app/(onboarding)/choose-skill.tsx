@@ -169,7 +169,7 @@ export default function ChooseSkillScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 360 }}
         >
           <Button onPress={handleNext} disabled={selected.length === 0}>
-            下一项（2/{selected.length + 3}）
+            {`下一项（2/${selected.length + 3}）`}
           </Button>
         </MotiView>
       </View>

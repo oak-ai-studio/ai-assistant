@@ -104,10 +104,7 @@ export default function SkillConfigScreen() {
 
   const handleNext = () => {
     if (isLast) {
-      router.push({
-        pathname: '/(onboarding)/confirm',
-        params: { skills },
-      });
+      router.replace('/(tabs)');
     } else {
       setCurrentIndex((prev) => prev + 1);
       setSelectedOption(null);
