@@ -140,7 +140,7 @@ export default function HomeScreen() {
     [isEmptyState]
   );
 
-  const onRouteFromMenu = (route: '/settings/assistant' | '/(tabs)/memory') => {
+  const onRouteFromMenu = (route: '/(tabs)/assistant' | '/(tabs)/memory') => {
     setSettingsVisible(false);
     setLegacyMenuVisible(false);
     router.push(route);
@@ -187,7 +187,7 @@ export default function HomeScreen() {
           {
             key: 'assistant',
             label: '助理',
-            onPress: () => onRouteFromMenu('/settings/assistant'),
+            onPress: () => onRouteFromMenu('/(tabs)/assistant'),
           },
           {
             key: 'memory',
@@ -268,7 +268,7 @@ export default function HomeScreen() {
           <View style={styles.menuCard}>
             <Pressable
               style={styles.menuItem}
-              onPress={() => onRouteFromMenu('/settings/assistant')}
+              onPress={() => onRouteFromMenu('/(tabs)/assistant')}
             >
               <Text style={[typography.bodyL, styles.menuText]}>助理</Text>
             </Pressable>
