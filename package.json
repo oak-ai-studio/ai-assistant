@@ -1,0 +1,26 @@
+{
+  "name": "ai-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@11.9.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "npm run generate -w @ai-assistant/db",
+    "db:migrate": "npm run migrate -w @ai-assistant/db",
+    "db:studio": "npm run studio -w @ai-assistant/db"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "eslint": "^9.23.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.29.0"
+  }
+}

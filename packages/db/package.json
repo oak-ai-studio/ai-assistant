@@ -1,0 +1,21 @@
+{
+  "name": "@ai-assistant/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "generate": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/ai_assistant?schema=public} prisma generate",
+    "migrate": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/ai_assistant?schema=public} prisma migrate dev",
+    "studio": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/ai_assistant?schema=public} prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.6.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.6.0"
+  }
+}

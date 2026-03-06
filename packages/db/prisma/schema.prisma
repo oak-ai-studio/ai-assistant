@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(cuid())
+  createdAt  DateTime    @default(now())
+  assistants Assistant[]
+  memories   Memory[]
+}
+
+model Assistant {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String    @default("小助")
+  avatar        String    @default("default")
+  systemPrompt  String?
+  pushTimeStart String?
+  pushTimeEnd   String?
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills        Skill[]
+  messages      Message[]
+
+  @@index([userId])
+}
+
+model Skill {
+  id           String    @id @default(cuid())
+  assistantId  String
+  name         String
+  icon         String
+  systemPrompt String
+  isActive     Boolean   @default(true)
+  order        Int       @default(0)
+  createdAt    DateTime  @default(now())
+  assistant    Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+  memories     Memory[]
+  todos        Todo[]
+
+  @@index([assistantId, isActive])
+}
+
+model Memory {
+  id           String    @id @default(cuid())
+  userId       String
+  skillId      String?
+  content      String
+  type         String
+  confidence   Float     @default(0.8)
+  isUserEdited Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill        Skill?    @relation(fields: [skillId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([skillId])
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  assistantId String
+  role        String
+  content     String
+  memoryBased Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  assistant   Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+
+  @@index([assistantId, createdAt])
+}
+
+model Todo {
+  id          String   @id @default(cuid())
+  skillId     String
+  content     String
+  priority    String   @default("medium")
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([skillId, isCompleted])
+}
