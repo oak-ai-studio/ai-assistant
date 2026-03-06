@@ -9,7 +9,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -109,6 +109,7 @@ function ScalePressable({
 }
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { state, menu, chat } = useLocalSearchParams<{
     state?: string;
@@ -144,19 +145,22 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
-        <ScalePressable
-          style={styles.settingsButton}
-          onPress={() => setSettingsVisible(true)}
-        >
-          <Ionicons
-            name="settings-outline"
-            size={18}
-            color={colors.ink}
-            style={styles.icon18}
-          />
-        </ScalePressable>
+      <ScalePressable
+        style={[
+          styles.settingsButton,
+          { top: insets.top + 16, right: 16 },
+        ]}
+        onPress={() => setSettingsVisible(true)}
+      >
+        <Ionicons
+          name="settings-outline"
+          size={18}
+          color={colors.ink}
+          style={styles.icon18}
+        />
+      </ScalePressable>
 
+      <View style={styles.inner}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -216,16 +220,22 @@ export default function HomeScreen() {
             ))}
           </View>
         </ScrollView>
-
-        <ScalePressable style={styles.fab} onPress={() => setChatVisible(true)}>
-          <Ionicons
-            name="chatbubble-ellipses"
-            size={24}
-            color="#fff"
-            style={styles.icon24}
-          />
-        </ScalePressable>
       </View>
+
+      <ScalePressable
+        style={[
+          styles.fab,
+          { bottom: insets.bottom + 24, right: 24 },
+        ]}
+        onPress={() => setChatVisible(true)}
+      >
+        <Ionicons
+          name="chatbubble-ellipses"
+          size={24}
+          color="#fff"
+          style={styles.icon24}
+        />
+      </ScalePressable>
 
       <Modal
         transparent
@@ -276,7 +286,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
-    position: 'relative',
   },
   scrollContent: {
     paddingBottom: 120,
@@ -295,9 +304,7 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 10,
+    zIndex: 20,
     width: 36,
     height: 36,
     borderRadius: radius.full,
@@ -377,6 +384,7 @@ const styles = StyleSheet.create({
     right: 12,
     top: 0,
     bottom: 0,
+    width: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -392,8 +400,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: 24,
-    bottom: 24,
+    zIndex: 20,
     width: 52,
     height: 52,
     borderRadius: radius.full,
