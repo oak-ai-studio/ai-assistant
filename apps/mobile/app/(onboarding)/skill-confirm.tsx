@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { Button } from '@/components/ui/Button';
 import { colors, radius } from '@/constants/tokens';
@@ -8,6 +8,8 @@ import { typography } from '@/constants/typography';
 
 export default function SkillConfirmScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const confirmRoute = returnTo ?? '/(tabs)';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -38,7 +40,7 @@ export default function SkillConfirmScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 200 }}
           style={styles.actions}
         >
-          <Button onPress={() => router.replace('/(tabs)')}>OK</Button>
+          <Button onPress={() => router.replace(confirmRoute as never)}>OK</Button>
           <Button
             variant="secondary"
             style={styles.waitButton}
