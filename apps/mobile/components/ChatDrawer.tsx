@@ -333,6 +333,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: 'DMSans_400Regular',
     fontSize: 15,
+    paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 10,
   },
