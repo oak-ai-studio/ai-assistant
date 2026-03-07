@@ -1,4 +1,12 @@
-export type MemoryType = 'preference' | 'habit' | 'fact' | 'weakness' | 'progress' | 'personality';
+export type MemoryType =
+  | 'preference'
+  | 'fact'
+  | 'experience'
+  | 'other'
+  | 'habit'
+  | 'weakness'
+  | 'progress'
+  | 'personality';
 
 export type MessageRole = 'user' | 'assistant';
 

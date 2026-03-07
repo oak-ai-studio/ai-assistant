@@ -51,6 +51,8 @@ describe('memory crud service', () => {
       skillSource: 'english_learning',
       startDate: '2026-03-01T00:00:00.000Z',
       endDate: '2026-03-07T23:59:59.999Z',
+      minConfidence: 0.75,
+      sortOrder: 'asc',
       limit: 20,
       offset: 10,
     });
@@ -66,11 +68,12 @@ describe('memory crud service', () => {
     const query = prisma.memory.findMany.mock.calls[0][0];
     expect(query.take).toBe(20);
     expect(query.skip).toBe(10);
-    expect(query.where.confidence.gte).toBe(0.6);
+    expect(query.where.confidence.gte).toBe(0.75);
     expect(query.where.type).toBe('preference');
     expect(query.where.skill.is.name).toBe('english_learning');
     expect(query.where.createdAt.gte).toBeInstanceOf(Date);
     expect(query.where.createdAt.lte).toBeInstanceOf(Date);
+    expect(query.orderBy.createdAt).toBe('asc');
   });
 
   it('creates memory with resolved skill and default confidence', async () => {

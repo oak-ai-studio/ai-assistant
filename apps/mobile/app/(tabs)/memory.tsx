@@ -36,8 +36,10 @@ const DATE_FILTERS: Array<{ key: DateFilter; label: string }> = [
 
 const MEMORY_TYPES: MemoryType[] = [
   'preference',
-  'habit',
   'fact',
+  'experience',
+  'other',
+  'habit',
   'weakness',
   'progress',
   'personality',
@@ -45,8 +47,10 @@ const MEMORY_TYPES: MemoryType[] = [
 
 const MEMORY_TYPE_LABELS: Record<MemoryType, string> = {
   preference: '偏好',
-  habit: '习惯',
   fact: '事实',
+  experience: '经历',
+  other: '其他',
+  habit: '习惯',
   weakness: '弱项',
   progress: '进展',
   personality: '性格',

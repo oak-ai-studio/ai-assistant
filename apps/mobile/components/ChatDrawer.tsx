@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { type ComponentRef, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   ListRenderItem,
@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import BottomSheet, {
   BottomSheetFlatList,
   BottomSheetFooter,
@@ -62,7 +62,7 @@ export function ChatDrawer({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const listRef = useRef<BottomSheetFlatListMethods | null>(null);
-  const inputRef = useRef<any>(null);
+  const inputRef = useRef<ComponentRef<typeof BottomSheetTextInput> | null>(null);
   const snapPoints = useMemo(() => ['50%', '90%'], []);
   const composerBottomPadding = Math.max(insets.bottom, 12);
 

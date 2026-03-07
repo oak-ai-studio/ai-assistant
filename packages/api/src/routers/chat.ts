@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { sendChatMessage, getConversationMessages, ChatServiceError } from '../services/chat';
 import { createChatLLMProvider, LLMProviderError } from '../services/llm';
+import { scheduleConversationMemoryExtraction } from '../services/memory';
 import { publicProcedure, router } from '../trpc';
 
 const sendMessageInputSchema = z.object({
@@ -26,13 +27,21 @@ export const chatRouter = router({
     try {
       const llmProvider = ctx.llmProvider ?? createChatLLMProvider();
 
-      return await sendChatMessage(
+      const result = await sendChatMessage(
         {
           prisma: ctx.prisma,
           llmProvider,
         },
         input,
       );
+
+      scheduleConversationMemoryExtraction({
+        prisma: ctx.prisma,
+        llmProvider,
+        conversationId: result.conversationId,
+      });
+
+      return result;
     } catch (error: unknown) {
       throw toTRPCError(error);
     }

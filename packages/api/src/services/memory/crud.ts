@@ -36,6 +36,8 @@ export interface ListMemoriesInput {
   skillSource?: string;
   startDate?: string;
   endDate?: string;
+  minConfidence?: number;
+  sortOrder?: 'asc' | 'desc';
   limit: number;
   offset: number;
 }
@@ -92,7 +94,7 @@ const buildListWhereClause = (input: ListMemoriesInput) => {
 
   return {
     userId: input.userId,
-    confidence: { gte: MIN_CONFIDENCE_THRESHOLD },
+    confidence: { gte: input.minConfidence ?? MIN_CONFIDENCE_THRESHOLD },
     ...(input.type ? { type: input.type } : {}),
     ...(input.skillSource ? { skill: { is: { name: input.skillSource } } } : {}),
     ...(input.startDate || input.endDate ? { createdAt } : {}),
@@ -135,6 +137,7 @@ export const listMemories = async (
   input: ListMemoriesInput,
 ): Promise<ListMemoriesResult> => {
   const where = buildListWhereClause(input);
+  const sortOrder = input.sortOrder ?? 'desc';
 
   const [memories, total] = await Promise.all([
     prisma.memory.findMany({
@@ -147,7 +150,7 @@ export const listMemories = async (
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: sortOrder,
       },
       take: input.limit,
       skip: input.offset,
