@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useSegments } from 'expo-router';
 import { Portal } from '@gorhom/portal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMutation } from '@tanstack/react-query';
 import { ChatDrawer, ChatMessage } from '@/components/ChatDrawer';
 import {
   PageContextPayload,
@@ -11,6 +12,8 @@ import {
 } from '@/constants/page-context';
 import { colors, radius } from '@/constants/tokens';
 import { shadows } from '@/constants/shadows';
+import { sendMessage as sendMessageApi } from '@/utils/api';
+import { useUserId } from '@/utils/userId';
 
 type GlobalChatContextValue = {
   isOpen: boolean;
@@ -49,9 +52,15 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
   const [snapIndex, setSnapIndex] = useState<0 | 1>(0);
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | undefined>();
+  const [sendError, setSendError] = useState<string | null>(null);
   const [pageContext, setPageContextState] = useState<PageContextPayload>(
     getPageContextForPathname(pathname)
   );
+  const { userId, isLoading: userIdLoading, error: userIdError } = useUserId();
+  const sendMessageMutation = useMutation({
+    mutationFn: sendMessageApi,
+  });
 
   const rootSegment = (segments[0] ?? '') as string;
   const shouldShowGlobalChat = rootSegment === '(tabs)' || rootSegment === '(skills)';
@@ -68,6 +77,7 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
 
   const openChat = useCallback(() => {
     setSnapIndex(0);
+    setSendError(null);
     setIsOpen(true);
   }, []);
 
@@ -75,6 +85,7 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
     if (preset === 'open') {
       setMessages(previewMessages);
       setDraft('');
+      setSendError(null);
       setSnapIndex(0);
       setIsOpen(true);
       return;
@@ -83,6 +94,7 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
     if (preset === 'empty') {
       setMessages([]);
       setDraft('');
+      setSendError(null);
       setSnapIndex(0);
       setIsOpen(true);
       return;
@@ -90,6 +102,7 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
 
     setMessages(previewMessages);
     setDraft('');
+    setSendError(null);
     setSnapIndex(1);
     setIsOpen(true);
   }, []);
@@ -121,30 +134,72 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
   const onCreateConversation = useCallback(() => {
     setMessages([]);
     setDraft('');
+    setConversationId(undefined);
+    setSendError(null);
   }, []);
 
-  const onSend = useCallback(() => {
+  const onSend = useCallback(async () => {
     const content = draft.trim();
     if (!content) {
       return;
     }
 
+    if (userIdLoading) {
+      return;
+    }
+
+    if (!userId) {
+      setSendError(userIdError ?? '用户标识初始化失败，请稍后重试');
+      return;
+    }
+
+    if (sendMessageMutation.isPending) {
+      return;
+    }
+
     const timestamp = Date.now();
+    const userMessageId = `user-${timestamp}`;
     setMessages((prev) => [
       ...prev,
       {
-        id: `user-${timestamp}`,
+        id: userMessageId,
         role: 'user',
         content,
       },
-      {
-        id: `assistant-${timestamp + 1}`,
-        role: 'assistant',
-        content: `收到，我会结合 ${pageContext.current_page} 页面信息继续帮你。`,
-      },
     ]);
     setDraft('');
-  }, [draft, pageContext.current_page]);
+    setSendError(null);
+
+    try {
+      const result = await sendMessageMutation.mutateAsync({
+        userId,
+        message: content,
+        skillId: pageContext.skill === 'assistant_hub' ? undefined : pageContext.skill,
+        pageContext,
+        conversationId,
+      });
+
+      setConversationId(result.conversationId || conversationId);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: result.message.id || `assistant-${timestamp + 1}`,
+          role: 'assistant',
+          content: result.message.content || '我暂时没组织好回复，再发一次试试。',
+        },
+      ]);
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : '发送失败，请稍后重试');
+    }
+  }, [
+    conversationId,
+    draft,
+    pageContext,
+    sendMessageMutation,
+    userId,
+    userIdError,
+    userIdLoading,
+  ]);
 
   const contextValue = useMemo(
     () => ({
@@ -190,6 +245,8 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
               onSend={onSend}
               onCreateConversation={onCreateConversation}
               topInset={insets.top + 52}
+              isSending={sendMessageMutation.isPending || userIdLoading}
+              sendError={sendError ?? userIdError}
             />
           </View>
         </Portal>

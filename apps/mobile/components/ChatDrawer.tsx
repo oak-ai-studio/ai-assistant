@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   KeyboardAvoidingView,
@@ -35,6 +36,8 @@ type ChatDrawerProps = {
   onSend: () => void;
   onCreateConversation: () => void;
   topInset: number;
+  isSending: boolean;
+  sendError: string | null;
 };
 
 const WINDOW_HEIGHT = Dimensions.get('window').height;
@@ -53,6 +56,8 @@ export function ChatDrawer({
   onSend,
   onCreateConversation,
   topInset,
+  isSending,
+  sendError,
 }: ChatDrawerProps) {
   const insets = useSafeAreaInsets();
   const sheetHeight = useRef(new Animated.Value(0)).current;
@@ -167,6 +172,12 @@ export function ChatDrawer({
             </View>
 
             <View style={styles.messagesSection}>
+              {sendError ? (
+                <View style={styles.errorBanner}>
+                  <Text style={[typography.bodyM, styles.errorText]}>{sendError}</Text>
+                </View>
+              ) : null}
+
               {messages.length === 0 ? (
                 <Text style={[typography.titleM, styles.emptyStateText]}>
                   嗨呀，有什么我可以帮你的吗？
@@ -207,9 +218,21 @@ export function ChatDrawer({
                   style={styles.input}
                   onSubmitEditing={onSend}
                   returnKeyType="send"
+                  editable={!isSending}
                 />
-                <Pressable style={styles.iconButton} onPress={onSend}>
-                  <Ionicons name="send" size={16} color="#fff" />
+                <Pressable
+                  style={[
+                    styles.iconButton,
+                    (isSending || draft.trim().length === 0) && styles.iconButtonDisabled,
+                  ]}
+                  onPress={onSend}
+                  disabled={isSending || draft.trim().length === 0}
+                >
+                  {isSending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="send" size={16} color="#fff" />
+                  )}
                 </Pressable>
               </View>
             </View>
@@ -282,6 +305,17 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginTop: 10,
   },
+  errorBanner: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: 'rgba(217,79,61,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorText: {
+    color: colors.danger,
+  },
   messageRow: {
     alignSelf: 'flex-start',
     maxWidth: '86%',
@@ -332,5 +366,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.orange,
+  },
+  iconButtonDisabled: {
+    backgroundColor: colors.orange50,
   },
 });

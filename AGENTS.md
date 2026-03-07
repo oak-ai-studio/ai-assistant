@@ -139,6 +139,12 @@ npm run build
 cd apps/api && npx prisma migrate dev
 ```
 
+## 前后端联调约定
+
+- 移动端 API 地址统一使用 `EXPO_PUBLIC_API_URL`（见 `apps/mobile/.env*`）
+- tRPC client 入口：`apps/mobile/utils/trpc.ts`
+- 用户唯一标识存储在 SecureStore（key: `ai-assistant-user-id`）
+
 ---
 
 ## 禁止事项
