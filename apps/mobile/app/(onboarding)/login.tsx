@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   codeRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: 10,
   },
   codeInputWrap: {
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   sendButtonWrap: {
     width: 112,
-    paddingBottom: 24,
+    justifyContent: 'center',
   },
   hint: {
     color: colors.ink60,

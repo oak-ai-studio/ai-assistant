@@ -30,7 +30,7 @@ export default function LandingScreen() {
         >
           <View style={styles.buttonWrap}>
             <Button onPress={() => router.push('/(onboarding)/login')}>
-              手机号登录
+              开始使用
             </Button>
           </View>
         </MotiView>

@@ -9,7 +9,7 @@ export default function Index() {
   }
 
   if (!isAuthenticated) {
-    return <Redirect href="/(onboarding)/login" />;
+    return <Redirect href="/(onboarding)" />;
   }
 
   if (!onboardingCompleted) {

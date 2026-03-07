@@ -335,7 +335,7 @@ export default function AssistantSettingsScreen() {
 
   const handleLogout = async () => {
     await signOut();
-    router.replace('/(onboarding)/login');
+    router.replace('/(onboarding)');
   };
 
   if (loading) {
