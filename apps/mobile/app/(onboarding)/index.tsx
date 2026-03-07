@@ -28,20 +28,10 @@ export default function LandingScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 300 }}
           style={styles.actions}
         >
-          <View style={styles.buttonRow}>
-            <View style={styles.buttonWrap}>
-              <Button onPress={() => router.push('/(onboarding)/login')}>
-                登录
-              </Button>
-            </View>
-            <View style={styles.buttonWrap}>
-              <Button
-                variant="secondary"
-                onPress={() => router.push('/(onboarding)/register')}
-              >
-                注册
-              </Button>
-            </View>
+          <View style={styles.buttonWrap}>
+            <Button onPress={() => router.push('/(onboarding)/login')}>
+              开始使用
+            </Button>
           </View>
         </MotiView>
       </View>
@@ -72,11 +62,7 @@ const styles = StyleSheet.create({
     color: colors.ink60,
   },
   actions: {},
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   buttonWrap: {
-    flex: 1,
+    width: '100%',
   },
 });

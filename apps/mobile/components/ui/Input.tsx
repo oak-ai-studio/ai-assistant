@@ -12,6 +12,9 @@ interface InputProps {
   onChangeText?: (text: string) => void;
   disabled?: boolean;
   secureTextEntry?: boolean;
+  keyboardType?: React.ComponentProps<typeof TextInput>['keyboardType'];
+  maxLength?: number;
+  autoCapitalize?: React.ComponentProps<typeof TextInput>['autoCapitalize'];
 }
 
 export function Input({
@@ -23,6 +26,9 @@ export function Input({
   onChangeText,
   disabled,
   secureTextEntry,
+  keyboardType,
+  maxLength,
+  autoCapitalize = 'none',
 }: InputProps) {
   const [focused, setFocused] = useState(false);
 
@@ -51,6 +57,9 @@ export function Input({
         onBlur={() => setFocused(false)}
         editable={!disabled}
         secureTextEntry={secureTextEntry}
+        keyboardType={keyboardType}
+        maxLength={maxLength}
+        autoCapitalize={autoCapitalize}
         style={{
           backgroundColor: focused ? colors.offWhite : colors.sandLight,
           borderWidth: 1.5,

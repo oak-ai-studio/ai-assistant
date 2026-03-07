@@ -1,4 +1,5 @@
 import { assistantRouter } from './routers/assistant';
+import { authRouter } from './routers/auth';
 import { chatRouter } from './routers/chat';
 import { memoryRouter } from './routers/memory';
 import { pushRouter } from './routers/push';
@@ -7,6 +8,7 @@ import { userRouter } from './routers/user';
 import { router } from './trpc';
 
 export const appRouter = router({
+  auth: authRouter,
   user: userRouter,
   assistant: assistantRouter,
   chat: chatRouter,
@@ -17,3 +19,6 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+export { createContext } from './context';
+export { extractBearerToken, getUserIdFromAccessToken } from './services/auth/jwt';

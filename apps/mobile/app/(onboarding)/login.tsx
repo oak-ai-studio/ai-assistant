@@ -1,21 +1,102 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { MotiView } from 'moti';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { colors } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
+import { useAuth } from '@/hooks/useAuth';
+import { trpcClient } from '@/utils/trpc';
+
+const PHONE_REGEX = /^1\d{10}$/;
+const CODE_REGEX = /^\d{6}$/;
+const RESEND_SECONDS = 60;
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const { signIn } = useAuth();
 
-  const handleLogin = () => {
-    router.push('/(onboarding)/name');
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [countdown]);
+
+  const canSendCode = useMemo(() => {
+    return PHONE_REGEX.test(phone) && countdown === 0 && !sendingCode;
+  }, [countdown, phone, sendingCode]);
+
+  const canVerifyCode = useMemo(() => {
+    return PHONE_REGEX.test(phone) && CODE_REGEX.test(code) && !verifying;
+  }, [code, phone, verifying]);
+
+  const handleSendCode = async () => {
+    if (!canSendCode) {
+      return;
+    }
+
+    setSendingCode(true);
+    setError(null);
+
+    try {
+      await trpcClient.auth.sendCode.mutate({ phone });
+      setCountdown(RESEND_SECONDS);
+      setHint('验证码已发送，请查看后端控制台日志。');
+    } catch {
+      setError('验证码发送失败，请稍后重试。');
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!canVerifyCode) {
+      return;
+    }
+
+    setVerifying(true);
+    setError(null);
+
+    try {
+      const result = await trpcClient.auth.verifyCode.mutate({
+        phone,
+        code,
+      });
+
+      await signIn({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: result.user,
+      });
+
+      if (result.user.onboardingCompleted) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/(onboarding)/name');
+      }
+    } catch {
+      setError('验证码错误或已过期，请重新获取。');
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -27,38 +108,46 @@ export default function LoginScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100 }}
           style={styles.content}
         >
-          <Text style={[typography.display, styles.title]}>欢迎</Text>
+          <Text style={[typography.display, styles.title]}>手机号登录</Text>
+          <Text style={[typography.bodyM, styles.subtitle]}>
+            输入手机号并通过验证码登录，未注册手机号会自动创建账号。
+          </Text>
 
           <View style={styles.form}>
             <Input
-              label="用户名"
-              placeholder="xxx"
-              value={username}
-              onChangeText={setUsername}
-            />
-            <Input
-              label="密码"
-              placeholder="xxx"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
+              label="手机号"
+              placeholder="13800138000"
+              value={phone}
+              onChangeText={(value) => setPhone(value.replace(/\D/g, '').slice(0, 11))}
+              keyboardType="number-pad"
+              maxLength={11}
+              hint="当前版本默认中国大陆 11 位手机号"
             />
 
-            {/* 记住密码 + 忘记密码 */}
-            <View style={styles.rememberRow}>
-              <Pressable
-                style={styles.checkboxRow}
-                onPress={() => setRememberMe((v) => !v)}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={[typography.bodyM, styles.rememberText]}>记住密码</Text>
-              </Pressable>
-              <Pressable>
-                <Text style={[typography.bodyM, styles.forgotText]}>忘记密码?</Text>
-              </Pressable>
+            <Text style={[typography.mono, styles.codeLabel]}>验证码</Text>
+            <View style={styles.codeRow}>
+              <View style={styles.codeInputWrap}>
+                <Input
+                  placeholder="请输入 6 位验证码"
+                  value={code}
+                  onChangeText={(value) => setCode(value.replace(/\D/g, '').slice(0, 6))}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+              </View>
+              <View style={styles.sendButtonWrap}>
+                <Button
+                  onPress={handleSendCode}
+                  disabled={!canSendCode}
+                  loading={sendingCode}
+                >
+                  {countdown > 0 ? `${countdown}s` : '发送'}
+                </Button>
+              </View>
             </View>
+
+            {hint ? <Text style={[typography.caption, styles.hint]}>{hint}</Text> : null}
+            {error ? <Text style={[typography.caption, styles.error]}>{error}</Text> : null}
           </View>
         </MotiView>
 
@@ -68,8 +157,10 @@ export default function LoginScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 200 }}
           style={styles.buttonSection}
         >
-          <Button onPress={handleLogin}>登录</Button>
-          <Button variant="secondary" onPress={() => router.back()}>
+          <Button onPress={handleVerifyCode} disabled={!canVerifyCode} loading={verifying}>
+            登录
+          </Button>
+          <Button variant="ghost" onPress={() => router.back()}>
             返回
           </Button>
         </MotiView>
@@ -95,44 +186,37 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.ink,
-    marginBottom: 36,
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: colors.ink60,
+    marginBottom: 28,
   },
   form: {
-    gap: 20,
+    gap: 14,
   },
-  rememberRow: {
+  codeLabel: {
+    color: colors.ink60,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  codeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
   },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  codeInputWrap: {
+    flex: 1,
   },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1.5,
-    borderColor: colors.ink30,
-    borderRadius: 4,
-    alignItems: 'center',
+  sendButtonWrap: {
+    width: 112,
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: colors.orange,
-    borderColor: colors.orange,
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 11,
-    fontFamily: 'DMSans_500Medium',
-  },
-  rememberText: {
+  hint: {
     color: colors.ink60,
   },
-  forgotText: {
-    color: colors.orange,
+  error: {
+    color: colors.danger,
   },
   buttonSection: {
     gap: 10,

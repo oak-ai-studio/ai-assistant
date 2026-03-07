@@ -1,10 +1,14 @@
 import cors from 'cors';
 import express, { type Request, type Response } from 'express';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import {
+  appRouter,
+  createContext as createApiContext,
+  extractBearerToken,
+  getUserIdFromAccessToken,
+} from '@ai-assistant/api';
+import { prisma } from '@ai-assistant/db';
 import { env } from './config/env';
-import { appRouter } from './routers';
-import { prisma } from './services/db';
-import type { TrpcContext } from './trpc';
 
 const app = express();
 
@@ -36,10 +40,12 @@ app.get('/health', async (_req: Request, res: Response) => {
   }
 });
 
-const createContext = ({ req }: { req: Request; res: Response }): TrpcContext => ({
-  prisma,
-  userId: req.header('x-user-id') ?? null,
-});
+const createContext = ({ req }: { req: Request; res: Response }) => {
+  const token = extractBearerToken(req.header('authorization'));
+  const userId = token ? getUserIdFromAccessToken(token) : null;
+
+  return createApiContext({ userId });
+};
 
 app.use(
   '/trpc',

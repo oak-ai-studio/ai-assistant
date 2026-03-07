@@ -29,8 +29,8 @@
 **后端基础架构（apps/api）**：
 - API：Express + tRPC（`/trpc`）
 - Health：`GET /health`（数据库连通性检查）
-- 核心表：`User`、`Assistant`、`Memory`、`Conversation`、`Message`、`Skill`
-- 关键环境变量：`DATABASE_URL`、`OPENAI_API_KEY`、`LLM_PROVIDER`
+- 核心表：`User`、`VerificationCode`、`Assistant`、`Memory`、`Conversation`、`Message`、`Skill`
+- 关键环境变量：`DATABASE_URL`、`OPENAI_API_KEY`、`LLM_PROVIDER`、`JWT_SECRET`
 
 ---
 
@@ -144,6 +144,15 @@ cd apps/api && npx prisma migrate dev
 - 移动端 API 地址统一使用 `EXPO_PUBLIC_API_URL`（见 `apps/mobile/.env*`）
 - tRPC client 入口：`apps/mobile/utils/trpc.ts`
 - 用户唯一标识存储在 SecureStore（key: `ai-assistant-user-id`）
+
+---
+
+## 认证流程（手机号验证码）
+
+- `auth.sendCode`：生成 6 位验证码，5 分钟有效，写入 `VerificationCode`（开发期输出到 console）
+- `auth.verifyCode`：校验验证码，手机号不存在则自动创建 `User`，返回 `accessToken(1h)` + `refreshToken(7d)`
+- `auth.refreshToken`：用 refresh token 换新 access token
+- 移动端 token 使用 `expo-secure-store` 持久化；tRPC 客户端自动携带 access token，401 时自动刷新并重试
 
 ---
 

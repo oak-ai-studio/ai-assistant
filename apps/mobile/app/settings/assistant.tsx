@@ -32,6 +32,7 @@ import {
   getAssistantSettings,
   saveAssistantSettings,
 } from '@/utils/assistant-settings';
+import { useAuth } from '@/hooks/useAuth';
 
 type SkillLabelMap = Partial<Record<AssistantSkillId, string>>;
 
@@ -104,6 +105,7 @@ const uniqueSkillOrder = (ids: AssistantSkillId[]) => {
 
 export default function AssistantSettingsScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
   const { userId } = useUserId();
   const {
     previewName,
@@ -331,6 +333,11 @@ export default function AssistantSettingsScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    router.replace('/(onboarding)');
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -439,6 +446,9 @@ export default function AssistantSettingsScreen() {
         >
           <Button onPress={handleSubmit} loading={saving || syncingSkills}>
             {hasNewSkills ? '下一项' : '完成'}
+          </Button>
+          <Button variant="danger" onPress={handleLogout}>
+            退出登录
           </Button>
         </MotiView>
       </ScrollView>

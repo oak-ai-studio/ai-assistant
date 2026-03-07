@@ -1,26 +1,165 @@
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import {
+  createTRPCClient,
+  createTRPCProxyClient,
+  httpBatchLink,
+} from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import type { AppRouter } from '@ai-assistant/api';
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+} from '@/utils/auth';
 
 const DEFAULT_API_URL = 'http://localhost:3000';
 const REQUEST_TIMEOUT_MS = 15000;
+const RETRY_HEADER = 'x-auth-retry';
 
 const stripTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
 export const API_BASE_URL = stripTrailingSlash(
-  process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_URL
+  process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_URL,
 );
 const TRPC_URL = `${API_BASE_URL}/trpc`;
 
 export const trpc = createTRPCReact<AppRouter>();
 
-export const trpcClient = createTRPCClient<AppRouter>({
+const refreshClient = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
       url: TRPC_URL,
     }),
   ],
 });
+
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    const refreshToken = await getRefreshToken();
+
+    if (!refreshToken) {
+      await clearTokens();
+      return null;
+    }
+
+    try {
+      const result = await refreshClient.auth.refreshToken.mutate({ refreshToken });
+      await setAccessToken(result.accessToken);
+      return result.accessToken;
+    } catch {
+      await clearTokens();
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+const authAwareFetch: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init);
+
+  if (!shouldRefreshToken(input, init, response.status)) {
+    return response;
+  }
+
+  const accessToken = await refreshAccessToken();
+  if (!accessToken) {
+    return response;
+  }
+
+  const headers = new Headers(init?.headers);
+  headers.set('authorization', `Bearer ${accessToken}`);
+  headers.set(RETRY_HEADER, '1');
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
+};
+
+const createAuthBatchLink = () =>
+  httpBatchLink({
+    url: TRPC_URL,
+    fetch: authAwareFetch,
+    headers: async () => {
+      const accessToken = await getAccessToken();
+
+      if (!accessToken) {
+        return {};
+      }
+
+      return {
+        authorization: `Bearer ${accessToken}`,
+      };
+    },
+  });
+
+export const trpcClient = createTRPCProxyClient<AppRouter>({
+  links: [createAuthBatchLink()],
+});
+
+export const trpcReactClient = createTRPCClient<AppRouter>({
+  links: [createAuthBatchLink()],
+});
+
+function shouldRefreshToken(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  status: number,
+): boolean {
+  if (status !== 401) {
+    return false;
+  }
+
+  if (getHeaderValue(init?.headers, RETRY_HEADER) === '1') {
+    return false;
+  }
+
+  const url = typeof input === 'string' ? input : input.toString();
+  if (url.includes('auth.refreshToken')) {
+    return false;
+  }
+
+  return true;
+}
+
+function getHeaderValue(headers: HeadersInit | undefined, key: string): string | null {
+  if (!headers) {
+    return null;
+  }
+
+  const normalizedKey = key.toLowerCase();
+
+  if (headers instanceof Headers) {
+    return headers.get(key) ?? headers.get(normalizedKey);
+  }
+
+  if (Array.isArray(headers)) {
+    const pair = headers.find(
+      ([headerName]) => headerName.toLowerCase() === normalizedKey,
+    );
+    return pair?.[1] ?? null;
+  }
+
+  const objectValue = headers[key] ?? headers[normalizedKey];
+  if (typeof objectValue === 'string') {
+    return objectValue;
+  }
+
+  if (Array.isArray(objectValue)) {
+    return objectValue[0] ?? null;
+  }
+
+  return null;
+}
 
 type QueryValue = string | number | boolean | null | undefined;
 type QueryParams = Record<string, QueryValue>;
@@ -93,7 +232,7 @@ type ApiRequestOptions<TBody> = {
 
 export async function apiRequest<TResponse, TBody = Record<string, unknown>>(
   path: `/api/${string}`,
-  options: ApiRequestOptions<TBody> = {}
+  options: ApiRequestOptions<TBody> = {},
 ): Promise<TResponse> {
   const method = options.method ?? 'POST';
   const queryString = options.query ? buildQueryString(options.query) : '';
@@ -122,7 +261,7 @@ export async function apiRequest<TResponse, TBody = Record<string, unknown>>(
       throw new ApiRequestError(
         extractErrorMessage(payload, response.status),
         response.status,
-        payload
+        payload,
       );
     }
 

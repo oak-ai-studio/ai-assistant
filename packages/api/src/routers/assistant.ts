@@ -20,7 +20,10 @@ export const assistantRouter = router({
       await ctx.prisma.user.upsert({
         where: { id: input.userId },
         update: {},
-        create: { id: input.userId },
+        create: {
+          id: input.userId,
+          phone: `legacy:${input.userId}`,
+        },
       });
 
       const assistant = await ctx.prisma.assistant.create({

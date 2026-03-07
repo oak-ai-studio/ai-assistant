@@ -1,13 +1,38 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { MotiView } from 'moti';
 import { Button } from '@/components/ui/Button';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
+import { trpcClient } from '@/utils/trpc';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SkillConfirmScreen() {
   const router = useRouter();
+  const { updateUser } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleComplete = async () => {
+    if (submitting) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await trpcClient.user.completeOnboarding.mutate();
+      await updateUser(result.user);
+      router.replace('/(tabs)');
+    } catch {
+      setError('完成引导失败，请重试。');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -38,14 +63,18 @@ export default function SkillConfirmScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 200 }}
           style={styles.actions}
         >
-          <Button onPress={() => router.replace('/(tabs)')}>OK</Button>
+          <Button onPress={handleComplete} loading={submitting}>
+            OK
+          </Button>
           <Button
             variant="secondary"
             style={styles.waitButton}
             onPress={() => router.back()}
+            disabled={submitting}
           >
             不，等等...
           </Button>
+          {error ? <Text style={[typography.caption, styles.errorText]}>{error}</Text> : null}
         </MotiView>
       </View>
     </SafeAreaView>
@@ -99,5 +128,9 @@ const styles = StyleSheet.create({
   waitButton: {
     backgroundColor: colors.offWhite,
     borderColor: colors.ink,
+  },
+  errorText: {
+    color: colors.danger,
+    textAlign: 'center',
   },
 });

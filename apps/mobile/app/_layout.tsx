@@ -9,7 +9,8 @@ import { DMMono_400Regular as DMMonoRegular } from '@expo-google-fonts/dm-mono';
 import { PortalProvider } from '@gorhom/portal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { GlobalChatProvider } from '@/components/chat/ChatOverlayProvider';
-import { trpc, trpcClient } from '@/utils/trpc';
+import { AuthProvider } from '@/hooks/useAuth';
+import { trpc, trpcReactClient } from '@/utils/trpc';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,12 +40,14 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <trpc.Provider client={trpcReactClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <PortalProvider>
-            <GlobalChatProvider>
-              <Stack screenOptions={{ headerShown: false }} />
-            </GlobalChatProvider>
+            <AuthProvider>
+              <GlobalChatProvider>
+                <Stack screenOptions={{ headerShown: false }} />
+              </GlobalChatProvider>
+            </AuthProvider>
           </PortalProvider>
         </QueryClientProvider>
       </trpc.Provider>
