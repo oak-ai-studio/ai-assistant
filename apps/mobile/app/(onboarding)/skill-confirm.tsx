@@ -1,19 +1,26 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { MotiView } from 'moti';
 import { Button } from '@/components/ui/Button';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { trpcClient } from '@/utils/trpc';
 import { useAuth } from '@/hooks/useAuth';
+import { parseAssistantSkills } from '@/constants/assistant-config';
+import {
+  getAssistantSettings,
+  saveAssistantSettings,
+} from '@/utils/assistant-settings';
 
 export default function SkillConfirmScreen() {
   const router = useRouter();
+  const { skills } = useLocalSearchParams<{ skills?: string | string[] }>();
   const { updateUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedSkills = useMemo(() => parseAssistantSkills(skills), [skills]);
 
   const handleComplete = async () => {
     if (submitting) {
@@ -24,6 +31,16 @@ export default function SkillConfirmScreen() {
     setError(null);
 
     try {
+      if (selectedSkills.length > 0) {
+        const settings = await getAssistantSettings();
+
+        await saveAssistantSettings({
+          assistantName: settings.assistantName,
+          assistantRole: settings.assistantRole,
+          activeSkills: selectedSkills,
+        });
+      }
+
       const result = await trpcClient.user.completeOnboarding.mutate();
       await updateUser(result.user);
       router.replace('/(tabs)');

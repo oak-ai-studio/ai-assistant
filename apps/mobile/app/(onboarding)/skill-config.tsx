@@ -108,7 +108,12 @@ export default function SkillConfigScreen() {
 
   const goNext = () => {
     if (isLast) {
-      router.push('/(onboarding)/skill-confirm');
+      router.push({
+        pathname: '/(onboarding)/skill-confirm',
+        params: {
+          skills: skillList.join(','),
+        },
+      });
       return;
     }
 
