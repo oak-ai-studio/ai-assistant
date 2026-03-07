@@ -44,13 +44,45 @@ export const VOCABULARY_SETTINGS_PAGE_CONTEXT: PageContextPayload = {
   },
 };
 
+export const MEMORY_PAGE_CONTEXT: PageContextPayload = {
+  current_page: 'memory_list',
+  skill: 'memory_management',
+  data: {},
+};
+
+export const SKILL_PAGE_CONTEXT: PageContextPayload = {
+  current_page: 'skill_page',
+  skill: 'skill_assistant',
+  data: {},
+};
+
+export function getOpeningLineForPathname(pathname: string): string {
+  if (pathname.includes('memory')) {
+    return '要不要我帮你整理一下记忆？';
+  }
+
+  if (pathname.includes('skills') || pathname.includes('vocabulary') || pathname.includes('cooking')) {
+    return '想聊聊这个技能吗？';
+  }
+
+  return '有什么可以帮你的？';
+}
+
 export function getPageContextForPathname(pathname: string): PageContextPayload {
+  if (pathname.includes('memory')) {
+    return MEMORY_PAGE_CONTEXT;
+  }
+
   if (pathname.includes('vocabulary/settings')) {
     return VOCABULARY_SETTINGS_PAGE_CONTEXT;
   }
 
   if (pathname.includes('vocabulary')) {
     return VOCABULARY_LIST_PAGE_CONTEXT;
+  }
+
+  if (pathname.includes('skills') || pathname.includes('cooking')) {
+    return SKILL_PAGE_CONTEXT;
   }
 
   return HOME_PAGE_CONTEXT;

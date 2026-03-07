@@ -1,69 +1,185 @@
-import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  PropsWithChildren,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { StyleSheet, View } from 'react-native';
 import { usePathname, useSegments } from 'expo-router';
 import { Portal } from '@gorhom/portal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMutation } from '@tanstack/react-query';
+import * as SecureStore from 'expo-secure-store';
 import { ChatDrawer, ChatMessage } from '@/components/ChatDrawer';
+import { FAB } from '@/components/chat/FAB';
 import {
   PageContextPayload,
+  getOpeningLineForPathname,
   getPageContextForPathname,
 } from '@/constants/page-context';
-import { colors, radius } from '@/constants/tokens';
-import { shadows } from '@/constants/shadows';
-import { sendMessage as sendMessageApi } from '@/utils/api';
+import { trpcClient } from '@/utils/trpc';
 import { useUserId } from '@/utils/userId';
+
+type ChatPreset = 'open' | 'empty' | 'full';
 
 type GlobalChatContextValue = {
   isOpen: boolean;
   openChat: () => void;
-  openChatWithPreset: (preset: 'open' | 'empty' | 'full') => void;
+  openChatWithPreset: (preset: ChatPreset) => void;
   closeChat: () => void;
   pageContext: PageContextPayload;
   setPageContext: (context: PageContextPayload) => void;
 };
 
+type PersistedChatState = {
+  conversationId: string | null;
+  messages: ChatMessage[];
+  userId: string | null;
+  assistantId: string | null;
+};
+
+type ChatSession = {
+  userId: string;
+  assistantId: string;
+};
+
+const CHAT_STATE_KEY = 'global-chat-state-v1';
 const GlobalChatContext = createContext<GlobalChatContextValue | undefined>(undefined);
 
-const previewMessages: ChatMessage[] = [
-  {
-    id: 'assistant-preview-1',
-    role: 'assistant',
-    content: '今天单词练习里有个词：albeit，你想先记它吗？',
-  },
-  {
-    id: 'user-preview-1',
-    role: 'user',
-    content: '记住了',
-  },
-  {
-    id: 'assistant-preview-2',
-    role: 'assistant',
-    content: '太好了。那我考考你，和我对话时你回答我。',
-  },
-];
+function buildLocalId(prefix: 'user' | 'assistant'): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function toErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+
+  return '消息发送失败，请稍后重试。';
+}
+
+function sanitizePersistedMessages(value: unknown): ChatMessage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) => {
+    if (
+      typeof item === 'object' &&
+      item &&
+      'id' in item &&
+      'role' in item &&
+      'content' in item &&
+      typeof item.id === 'string' &&
+      (item.role === 'assistant' || item.role === 'user') &&
+      typeof item.content === 'string'
+    ) {
+      return [
+        {
+          id: item.id,
+          role: item.role,
+          content: item.content,
+        },
+      ];
+    }
+
+    return [];
+  });
+}
 
 export function GlobalChatProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
+  const { userId, isLoading: userIdLoading, error: userIdError } = useUserId();
+
+  const rootSegment = (segments[0] ?? '') as string;
+  const shouldShowGlobalChat = rootSegment !== '(onboarding)';
+
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [snapIndex, setSnapIndex] = useState<0 | 1>(0);
+  const [isSending, setIsSending] = useState(false);
   const [draft, setDraft] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [conversationId, setConversationId] = useState<string | undefined>();
-  const [sendError, setSendError] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [session, setSession] = useState<ChatSession | null>(null);
   const [pageContext, setPageContextState] = useState<PageContextPayload>(
     getPageContextForPathname(pathname)
   );
-  const { userId, isLoading: userIdLoading, error: userIdError } = useUserId();
-  const sendMessageMutation = useMutation({
-    mutationFn: sendMessageApi,
-  });
 
-  const rootSegment = (segments[0] ?? '') as string;
-  const shouldShowGlobalChat = rootSegment === '(tabs)' || rootSegment === '(skills)';
+  useEffect(() => {
+    let active = true;
+
+    const loadPersistedState = async () => {
+      try {
+        const raw = await SecureStore.getItemAsync(CHAT_STATE_KEY);
+        if (!raw || !active) {
+          return;
+        }
+
+        const parsed = JSON.parse(raw) as Partial<PersistedChatState>;
+        const nextMessages = sanitizePersistedMessages(parsed.messages);
+
+        setMessages(nextMessages);
+        setConversationId(typeof parsed.conversationId === 'string' ? parsed.conversationId : null);
+
+        if (typeof parsed.userId === 'string' && typeof parsed.assistantId === 'string') {
+          setSession({
+            userId: parsed.userId,
+            assistantId: parsed.assistantId,
+          });
+        }
+      } catch {
+        setMessages([]);
+      } finally {
+        if (active) {
+          setIsHydrated(true);
+        }
+      }
+    };
+
+    void loadPersistedState();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    const persistedState: PersistedChatState = {
+      conversationId,
+      messages,
+      userId: session?.userId ?? null,
+      assistantId: session?.assistantId ?? null,
+    };
+
+    void SecureStore.setItemAsync(CHAT_STATE_KEY, JSON.stringify(persistedState));
+  }, [conversationId, isHydrated, messages, session]);
+
+  useEffect(() => {
+    if (!isHydrated || userIdLoading || !userId) {
+      return;
+    }
+
+    if (session && session.userId !== userId) {
+      setSession(null);
+      setConversationId(null);
+      setMessages([]);
+      setDraft('');
+      setErrorMessage(null);
+    }
+  }, [isHydrated, session, userId, userIdLoading]);
 
   useEffect(() => {
     setPageContextState(getPageContextForPathname(pathname));
@@ -76,36 +192,55 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
   }, [shouldShowGlobalChat]);
 
   const openChat = useCallback(() => {
+    setErrorMessage(null);
     setSnapIndex(0);
-    setSendError(null);
+    setMessages((prev) => {
+      if (prev.length > 0) {
+        return prev;
+      }
+
+      return [
+        {
+          id: buildLocalId('assistant'),
+          role: 'assistant',
+          content: getOpeningLineForPathname(pathname),
+        },
+      ];
+    });
     setIsOpen(true);
-  }, []);
+  }, [pathname]);
 
-  const openChatWithPreset = useCallback((preset: 'open' | 'empty' | 'full') => {
-    if (preset === 'open') {
-      setMessages(previewMessages);
+  const openChatWithPreset = useCallback(
+    (preset: ChatPreset) => {
+      setErrorMessage(null);
       setDraft('');
-      setSendError(null);
-      setSnapIndex(0);
-      setIsOpen(true);
-      return;
-    }
 
-    if (preset === 'empty') {
-      setMessages([]);
-      setDraft('');
-      setSendError(null);
-      setSnapIndex(0);
-      setIsOpen(true);
-      return;
-    }
+      if (preset === 'empty') {
+        setMessages([]);
+        setConversationId(null);
+        setSnapIndex(0);
+        setIsOpen(true);
+        return;
+      }
 
-    setMessages(previewMessages);
-    setDraft('');
-    setSendError(null);
-    setSnapIndex(1);
-    setIsOpen(true);
-  }, []);
+      setMessages((prev) => {
+        if (prev.length > 0) {
+          return prev;
+        }
+
+        return [
+          {
+            id: buildLocalId('assistant'),
+            role: 'assistant',
+            content: getOpeningLineForPathname(pathname),
+          },
+        ];
+      });
+      setSnapIndex(preset === 'full' ? 1 : 0);
+      setIsOpen(true);
+    },
+    [pathname]
+  );
 
   useEffect(() => {
     if (pathname.includes('vocabulary-chat-half')) {
@@ -131,16 +266,39 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
     setPageContextState(context);
   }, []);
 
+  const ensureSession = useCallback(async (): Promise<ChatSession> => {
+    if (!userId) {
+      throw new Error(userIdError ?? '用户标识初始化失败，请稍后重试');
+    }
+
+    if (session && session.userId === userId) {
+      return session;
+    }
+
+    const result = await trpcClient.assistant.create.mutate({
+      userId,
+      name: '安迪',
+    });
+
+    const nextSession = {
+      userId,
+      assistantId: result.assistant.id,
+    };
+
+    setSession(nextSession);
+    return nextSession;
+  }, [session, userId, userIdError]);
+
   const onCreateConversation = useCallback(() => {
-    setMessages([]);
     setDraft('');
-    setConversationId(undefined);
-    setSendError(null);
+    setErrorMessage(null);
+    setConversationId(null);
+    setMessages([]);
   }, []);
 
   const onSend = useCallback(async () => {
     const content = draft.trim();
-    if (!content) {
+    if (!content || isSending) {
       return;
     }
 
@@ -149,53 +307,62 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
     }
 
     if (!userId) {
-      setSendError(userIdError ?? '用户标识初始化失败，请稍后重试');
+      setErrorMessage(userIdError ?? '用户标识初始化失败，请稍后重试');
       return;
     }
 
-    if (sendMessageMutation.isPending) {
-      return;
-    }
+    const localUserMessageId = buildLocalId('user');
+    const currentPageContext = pageContext;
 
-    const timestamp = Date.now();
-    const userMessageId = `user-${timestamp}`;
+    setDraft('');
+    setErrorMessage(null);
+    setIsSending(true);
     setMessages((prev) => [
       ...prev,
       {
-        id: userMessageId,
+        id: localUserMessageId,
         role: 'user',
         content,
       },
     ]);
-    setDraft('');
-    setSendError(null);
 
     try {
-      const result = await sendMessageMutation.mutateAsync({
-        userId,
+      const currentSession = await ensureSession();
+      const result = await trpcClient.chat.sendMessage.mutate({
+        userId: currentSession.userId,
+        assistantId: currentSession.assistantId,
+        conversationId: conversationId ?? undefined,
         message: content,
-        skillId: pageContext.skill === 'assistant_hub' ? undefined : pageContext.skill,
-        pageContext,
-        conversationId,
+        pageContext: currentPageContext as Record<string, unknown>,
       });
 
-      setConversationId(result.conversationId || conversationId);
+      setConversationId(result.conversationId);
       setMessages((prev) => [
-        ...prev,
+        ...prev.map((message) =>
+          message.id === localUserMessageId
+            ? {
+                ...message,
+                id: result.userMessage.id,
+              }
+            : message
+        ),
         {
-          id: result.message.id || `assistant-${timestamp + 1}`,
+          id: result.assistantMessage.id,
           role: 'assistant',
-          content: result.message.content || '我暂时没组织好回复，再发一次试试。',
+          content: result.assistantMessage.content,
         },
       ]);
-    } catch (error) {
-      setSendError(error instanceof Error ? error.message : '发送失败，请稍后重试');
+    } catch (error: unknown) {
+      setErrorMessage(toErrorMessage(error));
+    } finally {
+      setIsSending(false);
     }
   }, [
     conversationId,
     draft,
+    ensureSession,
+    isSending,
     pageContext,
-    sendMessageMutation,
     userId,
     userIdError,
     userIdLoading,
@@ -213,6 +380,8 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
     [closeChat, isOpen, openChat, openChatWithPreset, pageContext, setPageContext]
   );
 
+  const openingLine = getOpeningLineForPathname(pathname);
+
   return (
     <GlobalChatContext.Provider value={contextValue}>
       {children}
@@ -220,33 +389,21 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
       {shouldShowGlobalChat ? (
         <Portal>
           <View pointerEvents="box-none" style={styles.portalRoot}>
-            {!isOpen ? (
-              <Pressable
-                style={[
-                  styles.fab,
-                  {
-                    bottom: insets.bottom + 24,
-                    right: 24,
-                  },
-                ]}
-                onPress={openChat}
-              >
-                <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
-              </Pressable>
-            ) : null}
+            {!isOpen ? <FAB bottom={insets.bottom + 24} onPress={openChat} /> : null}
 
             <ChatDrawer
               visible={isOpen}
               snapIndex={snapIndex}
               messages={messages}
               draft={draft}
+              isSending={isSending}
+              errorMessage={errorMessage}
+              openingLine={openingLine}
               onDraftChange={setDraft}
               onClose={closeChat}
               onSend={onSend}
               onCreateConversation={onCreateConversation}
-              topInset={insets.top + 52}
-              isSending={sendMessageMutation.isPending || userIdLoading}
-              sendError={sendError ?? userIdError}
+              topInset={insets.top + 40}
             />
           </View>
         </Portal>
@@ -267,16 +424,5 @@ export function useGlobalChat() {
 const styles = StyleSheet.create({
   portalRoot: {
     ...StyleSheet.absoluteFillObject,
-  },
-  fab: {
-    position: 'absolute',
-    zIndex: 40,
-    width: 52,
-    height: 52,
-    borderRadius: radius.full,
-    backgroundColor: colors.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.orange,
   },
 });
