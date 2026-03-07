@@ -7,12 +7,17 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run --coverage --config vitest.config.ts"
   },
   "dependencies": {
     "@ai-assistant/db": "*",
     "@ai-assistant/shared": "*",
     "@trpc/server": "^11.11.0",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
+    "vitest": "^4.0.18"
   }
 }
