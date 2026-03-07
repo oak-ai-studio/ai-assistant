@@ -14,10 +14,12 @@
     "@ai-assistant/db": "*",
     "@ai-assistant/shared": "*",
     "@trpc/server": "^11.11.0",
+    "jsonwebtoken": "^9.0.2",
     "openai": "^5.23.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@vitest/coverage-v8": "^4.0.18",
     "vitest": "^4.0.18"
   }

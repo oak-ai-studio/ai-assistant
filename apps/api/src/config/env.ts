@@ -11,6 +11,7 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().default(''),
   ANTHROPIC_API_KEY: z.string().default(''),
   GEMINI_API_KEY: z.string().default(''),
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
 });
 
 export const env = envSchema.parse(process.env);

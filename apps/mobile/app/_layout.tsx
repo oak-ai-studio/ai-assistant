@@ -8,6 +8,7 @@ import { DMMono_400Regular as DMMonoRegular } from '@expo-google-fonts/dm-mono';
 import { PortalProvider } from '@gorhom/portal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { GlobalChatProvider } from '@/components/chat/ChatOverlayProvider';
+import { AuthProvider } from '@/hooks/useAuth';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -25,9 +26,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PortalProvider>
-        <GlobalChatProvider>
-          <Stack screenOptions={{ headerShown: false }} />
-        </GlobalChatProvider>
+        <AuthProvider>
+          <GlobalChatProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </GlobalChatProvider>
+        </AuthProvider>
       </PortalProvider>
     </GestureHandlerRootView>
   );

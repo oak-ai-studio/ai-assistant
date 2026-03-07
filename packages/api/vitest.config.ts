@@ -9,9 +9,11 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'html', 'json-summary'],
       include: [
         'src/routers/chat.ts',
+        'src/routers/auth.ts',
         'src/routers/memory.ts',
         'src/routers/skills.ts',
         'src/routers/assistant.ts',
+        'src/services/auth/**/*.ts',
         'src/services/chat/chat-service.ts',
         'src/services/chat/system-prompt.ts',
         'src/services/llm/factory.ts',

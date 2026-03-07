@@ -25,6 +25,7 @@ import {
   getAssistantSettings,
   saveAssistantSettings,
 } from '@/utils/assistant-settings';
+import { useAuth } from '@/hooks/useAuth';
 
 function SkillCheckbox({
   label,
@@ -50,6 +51,7 @@ function SkillCheckbox({
 
 export default function AssistantSettingsScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
   const {
     previewName,
     previewRole,
@@ -131,6 +133,11 @@ export default function AssistantSettingsScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    router.replace('/(onboarding)');
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -210,6 +217,9 @@ export default function AssistantSettingsScreen() {
         >
           <Button onPress={handleSubmit} loading={saving}>
             {hasNewSkills ? '下一项' : '完成'}
+          </Button>
+          <Button variant="danger" onPress={handleLogout}>
+            退出登录
           </Button>
         </MotiView>
       </ScrollView>

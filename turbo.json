@@ -28,6 +28,10 @@
       ]
     },
     "@ai-assistant/mobile#build": {
+      "dependsOn": [
+        "@ai-assistant/api#build",
+        "@ai-assistant/shared#build"
+      ],
       "outputs": []
     }
   }
