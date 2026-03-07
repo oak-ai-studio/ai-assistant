@@ -31,6 +31,7 @@ import { listSkills } from '@/utils/api';
 import { resolveSkillIcon, SKILL_SUBTITLE_MAP } from '@/utils/skills';
 import { getAssistantSettings } from '@/utils/assistant-settings';
 import { useUserId } from '@/utils/userId';
+import { useAuth } from '@/hooks/useAuth';
 
 type Reminder = {
   id: string;
@@ -97,6 +98,7 @@ export default function HomeScreen() {
     chat?: string;
   }>();
   const { openChat, setPageContext } = useGlobalChat();
+  const { signOut } = useAuth();
   const { userId, isLoading: userIdLoading } = useUserId();
 
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -168,6 +170,13 @@ export default function HomeScreen() {
     setSettingsVisible(false);
     setLegacyMenuVisible(false);
     router.push(route);
+  };
+
+  const handleSignOut = async () => {
+    setSettingsVisible(false);
+    setLegacyMenuVisible(false);
+    await signOut();
+    router.replace('/(onboarding)');
   };
 
   useEffect(() => {
@@ -262,6 +271,14 @@ export default function HomeScreen() {
             key: 'memory',
             label: '记忆',
             onPress: () => onRouteFromMenu('/(tabs)/memory'),
+          },
+          {
+            key: 'signout',
+            label: '退出登录',
+            destructive: true,
+            onPress: () => {
+              void handleSignOut();
+            },
           },
         ]}
       />
@@ -373,6 +390,15 @@ export default function HomeScreen() {
               onPress={() => onRouteFromMenu('/(tabs)/memory')}
             >
               <Text style={[typography.bodyL, styles.menuText]}>记忆</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.menuItem, styles.menuItemBorder]}
+              onPress={() => {
+                void handleSignOut();
+              }}
+            >
+              <Text style={[typography.bodyL, styles.menuTextDanger]}>退出登录</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -542,5 +568,8 @@ const styles = StyleSheet.create({
   },
   menuText: {
     color: colors.ink,
+  },
+  menuTextDanger: {
+    color: colors.danger,
   },
 });
