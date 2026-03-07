@@ -6,13 +6,15 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'html'],
       include: [
         'src/routers/chat.ts',
+        'src/routers/memory.ts',
         'src/services/chat/chat-service.ts',
         'src/services/chat/system-prompt.ts',
         'src/services/llm/factory.ts',
         'src/services/llm/openai-provider.ts',
+        'src/services/memory/**/*.ts',
       ],
       thresholds: {
         lines: 80,
