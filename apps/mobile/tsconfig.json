@@ -4,6 +4,9 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
+      "@ai-assistant/api": [
+        "../../packages/api/src/index.ts"
+      ],
       "@/*": [
         "./*"
       ],

@@ -1,144 +1,190 @@
+import { useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { MotiView } from 'moti';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
+import { parseAssistantSkills } from '@/constants/assistant-config';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
+import { trpcClient } from '@/utils/trpc';
+
+type OnboardingSkillId = 'vocab' | 'cooking' | 'chat';
 
 interface SkillConfig {
   title: string;
   question: string;
-  options: string[];
+  options: [string, string, string];
+  primarySkillSource: string;
+  fallbackSkillSource: string;
 }
 
-const SKILL_CONFIGS: Record<string, SkillConfig> = {
+const ONBOARDING_USER_ID =
+  process.env.EXPO_PUBLIC_ONBOARDING_USER_ID ?? 'onboarding-user';
+
+const SKILL_CONFIGS: Record<OnboardingSkillId, SkillConfig> = {
   vocab: {
     title: '背单词',
-    question: '多久和你背一次单词？',
-    options: ['每天', '每周', '自定义...'],
+    question: '你希望以什么方式记忆单词？',
+    options: ['通过场景例句', '填空练习', '词语翻译'],
+    primarySkillSource: 'english_learning',
+    fallbackSkillSource: '背单词',
   },
   cooking: {
     title: '做饭助理',
-    question: '提醒你购买食材？',
-    options: ['是', '否'],
+    question: '你平时的烹饪水平是？',
+    options: ['新手入门', '会做基础家常菜', '有一定经验'],
+    primarySkillSource: 'cooking',
+    fallbackSkillSource: '做饭助理',
   },
   chat: {
     title: '随便聊聊',
     question: '你希望助理聊天时的风格是？',
     options: ['轻松有趣', '温暖治愈', '直接理性'],
+    primarySkillSource: 'chat',
+    fallbackSkillSource: '随便聊聊',
   },
 };
 
-function OptionCard({
-  label,
-  selected,
-  onSelect,
-}: {
+function OptionCard({ label, onSelect, disabled }: {
   label: string;
-  selected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
 }) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
     <Pressable
-      onPressIn={() => {
-        scale.value = withSpring(0.97, { damping: 20, stiffness: 300 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 20, stiffness: 200 });
-      }}
       onPress={onSelect}
+      disabled={disabled}
     >
-      <Animated.View
-        style={[animStyle, styles.optionCard, selected && styles.optionCardSelected]}
-      >
-        <Text
-          style={[
-            typography.bodyL,
-            { color: selected ? colors.orange : colors.ink, flex: 1 },
-          ]}
-        >
-          {label}
-        </Text>
-        {selected && (
-          <View style={styles.checkCircle}>
-            <Text style={styles.checkMark}>✓</Text>
-          </View>
-        )}
-      </Animated.View>
+      <View style={[styles.optionCard, disabled && styles.optionCardDisabled]}>
+        <Text style={[typography.bodyL, styles.optionText]}>{label}</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.ink60} />
+      </View>
     </Pressable>
   );
 }
 
 export default function SkillConfigScreen() {
   const router = useRouter();
-  const { skills } = useLocalSearchParams<{ skills: string }>();
+  const { skills } = useLocalSearchParams<{ skills?: string | string[] }>();
 
-  const skillList = skills
-    ? skills.split(',').filter((s) => s in SKILL_CONFIGS)
-    : [];
+  const skillList = useMemo(
+    () =>
+      parseAssistantSkills(skills).filter(
+        (skillId): skillId is OnboardingSkillId => skillId in SKILL_CONFIGS
+      ),
+    [skills]
+  );
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const bootstrapPromiseRef = useRef<Promise<void> | null>(null);
 
   const currentSkillId = skillList[currentIndex];
   const currentConfig = currentSkillId ? SKILL_CONFIGS[currentSkillId] : null;
   const total = skillList.length;
   const isLast = currentIndex === total - 1;
 
-  // Step numbering: name=1, skill-select=2, configs start at 3
-  const totalSteps = total + 3; // name(1) + skill-select(2) + configs + confirm
-  const currentStep = currentIndex + 3;
-
-  const handleNext = () => {
-    if (isLast) {
-      router.push('./skill-confirm');
-    } else {
-      setCurrentIndex((prev) => prev + 1);
-      setSelectedOption(null);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentIndex === 0) {
-      router.back();
-    } else {
-      setCurrentIndex((prev) => prev - 1);
-      setSelectedOption(null);
-    }
-  };
-
   if (!currentConfig) {
-    router.replace('/');
+    router.replace('/(onboarding)/choose-skill');
     return null;
   }
+
+  const ensureAssistantReady = async () => {
+    if (!bootstrapPromiseRef.current) {
+      bootstrapPromiseRef.current = trpcClient.assistant.create
+        .mutate({ userId: ONBOARDING_USER_ID })
+        .then(() => undefined)
+        .catch(() => undefined)
+        .finally(() => {
+          bootstrapPromiseRef.current = null;
+        });
+    }
+
+    await bootstrapPromiseRef.current;
+  };
+
+  const goNext = () => {
+    if (isLast) {
+      router.push({
+        pathname: '/(onboarding)/skill-confirm',
+        params: {
+          skills: skillList.join(','),
+        },
+      });
+      return;
+    }
+
+    setCurrentIndex((previous) => previous + 1);
+  };
+
+  const savePreference = async (answer: string) => {
+    await ensureAssistantReady();
+
+    const payload = {
+      userId: ONBOARDING_USER_ID,
+      content: `我希望${answer}`,
+      type: 'preference' as const,
+    };
+
+    try {
+      await trpcClient.memory.create.mutate({
+        ...payload,
+        skillSource: currentConfig.primarySkillSource,
+      });
+    } catch {
+      await trpcClient.memory.create.mutate({
+        ...payload,
+        skillSource: currentConfig.fallbackSkillSource,
+      });
+    }
+  };
+
+  const handleSelect = async (answer: string) => {
+    if (submitting) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await savePreference(answer);
+    } catch {
+      // Skip blocking onboarding when backend is unavailable.
+    } finally {
+      setSubmitting(false);
+      goNext();
+    }
+  };
+
+  const handleSkip = () => {
+    if (submitting) {
+      return;
+    }
+
+    goNext();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
-        {/* Progress bar */}
-        <View style={styles.progressBar}>
-          {skillList.map((_, i) => (
+        <View style={styles.header}>
+          <Text style={[typography.mono, styles.progressText]}>
+            {currentIndex + 1}/{total}
+          </Text>
+          <View style={styles.progressBar}>
+            {skillList.map((skillId, index) => (
             <View
-              key={i}
+              key={skillId}
               style={[
                 styles.progressSegment,
-                i <= currentIndex && styles.progressSegmentActive,
+                index <= currentIndex && styles.progressSegmentActive,
               ]}
             />
-          ))}
+            ))}
+          </View>
         </View>
 
         <MotiView
@@ -148,24 +194,17 @@ export default function SkillConfigScreen() {
           transition={{ type: 'spring', damping: 22, stiffness: 120 }}
           style={styles.content}
         >
-          {/* Avatar */}
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>助</Text>
           </View>
 
-          {/* Skill title */}
           <Text style={[typography.mono, styles.skillLabel]}>
             完善技能 · {currentConfig.title}
           </Text>
 
-          {/* Question */}
-          <Text style={[typography.titleL, styles.question]}>
-            1. {currentConfig.question}
-          </Text>
-
-          {/* Options */}
+          <Text style={[typography.titleL, styles.question]}>{currentConfig.question}</Text>
           <View style={styles.optionList}>
-            {currentConfig.options.map((option, i) => (
+            {currentConfig.options.map((option, index) => (
               <MotiView
                 key={option}
                 from={{ opacity: 0, translateY: 8 }}
@@ -174,28 +213,22 @@ export default function SkillConfigScreen() {
                   type: 'spring',
                   damping: 20,
                   stiffness: 100,
-                  delay: i * 80,
+                  delay: index * 70,
                 }}
               >
                 <OptionCard
                   label={option}
-                  selected={selectedOption === option}
-                  onSelect={() => setSelectedOption(option)}
+                  disabled={submitting}
+                  onSelect={() => handleSelect(option)}
                 />
               </MotiView>
             ))}
           </View>
         </MotiView>
 
-        {/* Bottom actions */}
-        <View style={styles.buttonSection}>
-          <Button onPress={handleNext}>
-            {isLast ? `下一项（${currentStep}/${totalSteps}）` : `下一项（${currentStep}/${totalSteps}）`}
-          </Button>
-          <Button variant="ghost" onPress={handleBack}>
-            上一项
-          </Button>
-        </View>
+        <Button variant="ghost" onPress={handleSkip} disabled={submitting}>
+          跳过
+        </Button>
       </View>
     </SafeAreaView>
   );
@@ -211,11 +244,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 48,
     paddingBottom: 32,
+    justifyContent: 'space-between',
+  },
+  header: {
+    marginBottom: 24,
+  },
+  progressText: {
+    color: colors.ink60,
+    marginBottom: 10,
   },
   progressBar: {
     flexDirection: 'row',
     gap: 6,
-    marginBottom: 32,
   },
   progressSegment: {
     flex: 1,
@@ -252,37 +292,25 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   optionList: {
-    gap: 10,
+    gap: 12,
   },
   optionCard: {
     backgroundColor: colors.offWhite,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderWidth: 1.5,
     borderColor: colors.ink10,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     ...shadows.sm,
   },
-  optionCardSelected: {
-    backgroundColor: colors.orangeBg,
-    borderColor: colors.orange,
+  optionCardDisabled: {
+    opacity: 0.6,
   },
-  checkCircle: {
-    width: 20,
-    height: 20,
-    backgroundColor: colors.orange,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkMark: {
-    color: '#fff',
-    fontSize: 11,
-    fontFamily: 'DMSans_500Medium',
-  },
-  buttonSection: {
-    gap: 10,
+  optionText: {
+    color: colors.ink,
+    flex: 1,
   },
 });
