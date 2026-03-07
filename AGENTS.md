@@ -26,6 +26,12 @@
 - **样式**：NativeWind v4 (Tailwind for RN)
 - **动效**：Moti + React Native Reanimated
 
+**后端基础架构（apps/api）**：
+- API：Express + tRPC（`/trpc`）
+- Health：`GET /health`（数据库连通性检查）
+- 核心表：`User`、`Assistant`、`Memory`、`Conversation`、`Message`、`Skill`
+- 关键环境变量：`DATABASE_URL`、`OPENAI_API_KEY`、`LLM_PROVIDER`
+
 ---
 
 ## 目录结构
@@ -44,6 +50,9 @@ ai-assistant/
 │   ├── BACKEND.md                # 后端规范
 │   └── DESIGN.md                 # 设计系统快速参考
 ├── apps/
+│   ├── api/                      # Express + tRPC 后端服务
+│   │   ├── src/                  # 服务入口、路由、配置、DB 服务
+│   │   └── prisma/               # Prisma Schema + Migrations
 │   └── mobile/                   # React Native App
 │       ├── app/                  # Expo Router 页面
 │       ├── components/           # 组件
@@ -77,7 +86,7 @@ cd ../ai-assistant-feat-onboarding
 
 ### 4. 测试
 ```bash
-npm run test -- --run
+npm run test
 npm run lint
 npm run build
 ```
@@ -114,8 +123,11 @@ npm run build
 # 启动开发服务器
 cd apps/mobile && npx expo start
 
+# 启动后端 API
+cd apps/api && npm run dev
+
 # 运行测试
-npm run test -- --run
+npm run test
 
 # Lint
 npm run lint
@@ -123,8 +135,8 @@ npm run lint
 # 构建
 npm run build
 
-# 数据库迁移
-cd packages/db && npx prisma migrate dev
+# 数据库迁移（后端）
+cd apps/api && npx prisma migrate dev
 ```
 
 ---
