@@ -135,19 +135,6 @@ export default function LoginScreen() {
                   maxLength={6}
                 />
               </View>
-              <View style={styles.confirmButtonWrap}>
-                <Button
-                  onPress={handleVerifyCode}
-                  disabled={!canVerifyCode}
-                  loading={verifying}
-                  size="sm"
-                >
-                  确认
-                </Button>
-              </View>
-            </View>
-
-            <View style={styles.sendCodeRow}>
               <View style={styles.sendButtonWrap}>
                 <Button
                   variant="secondary"
@@ -172,6 +159,9 @@ export default function LoginScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 200 }}
           style={styles.buttonSection}
         >
+          <Button onPress={handleVerifyCode} disabled={!canVerifyCode} loading={verifying}>
+            登录
+          </Button>
           <Button variant="ghost" onPress={() => router.back()}>
             返回
           </Button>
@@ -215,15 +205,9 @@ const styles = StyleSheet.create({
   codeInputWrap: {
     flex: 1,
   },
-  confirmButtonWrap: {
-    width: 112,
-    justifyContent: 'center',
-  },
-  sendCodeRow: {
-    alignItems: 'flex-end',
-  },
   sendButtonWrap: {
     width: 112,
+    justifyContent: 'center',
   },
   hint: {
     color: colors.ink60,
