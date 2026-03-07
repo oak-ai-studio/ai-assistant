@@ -120,6 +120,7 @@ export function ChatDrawer({
         ref={bottomSheetRef}
         index={-1}
         snapPoints={snapPoints}
+        enableDynamicSizing={false}
         enablePanDownToClose
         onChange={handleSheetChange}
         keyboardBehavior="interactive"
@@ -168,15 +169,19 @@ export function ChatDrawer({
 
           <View style={[styles.inputSection, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <View style={styles.inputRow}>
+              <Pressable style={styles.micButton} onPress={() => {}}>
+                <Ionicons name="mic-outline" size={18} color={colors.ink60} />
+              </Pressable>
               <TextInput
                 value={draft}
                 onChangeText={onDraftChange}
                 placeholder="说点什么..."
                 placeholderTextColor={colors.ink30}
                 style={styles.input}
-                onSubmitEditing={onSend}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
                 editable={!isSending}
-                returnKeyType="send"
               />
               <Pressable
                 style={[styles.sendButton, (!draft.trim() || isSending) && styles.sendButtonDisabled]}
@@ -299,30 +304,45 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
     backgroundColor: colors.offWhite,
-    borderRadius: radius.full,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.ink10,
-    paddingLeft: 14,
+    paddingLeft: 10,
     paddingRight: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
+  },
+  micButton: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.sandLight,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    marginBottom: 2,
   },
   input: {
     flex: 1,
-    minHeight: 22,
+    minHeight: 56,
+    maxHeight: 112,
     color: colors.ink,
     fontFamily: 'DMSans_400Regular',
     fontSize: 15,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   sendButton: {
-    width: 30,
-    height: 30,
+    width: 34,
+    height: 34,
     borderRadius: radius.full,
     backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 2,
   },
   sendButtonDisabled: {
     opacity: 0.45,
