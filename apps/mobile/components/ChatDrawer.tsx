@@ -127,7 +127,6 @@ export function ChatDrawer({
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
         topInset={topInset}
-        bottomInset={insets.bottom}
         style={styles.sheetRoot}
         backgroundStyle={styles.sheetBackground}
         handleIndicatorStyle={styles.handle}
@@ -168,29 +167,33 @@ export function ChatDrawer({
             <Text style={[typography.bodyM, styles.errorText]}>{errorMessage}</Text>
           ) : null}
 
-          <View style={styles.inputSection}>
+          <View style={[styles.inputSection, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <View style={styles.inputRow}>
-              <TextInput
-                value={draft}
-                onChangeText={onDraftChange}
-                placeholder="说点什么..."
-                placeholderTextColor={colors.ink30}
-                style={styles.input}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-                editable={!isSending}
-              />
-              <Pressable style={styles.micButton} onPress={() => {}}>
-                <Ionicons name="mic-outline" size={18} color={colors.ink60} />
-              </Pressable>
-              <Pressable
-                style={[styles.sendButton, (!draft.trim() || isSending) && styles.sendButtonDisabled]}
-                disabled={!draft.trim() || isSending}
-                onPress={onSend}
-              >
-                <Ionicons name="send" size={16} color="#fff" />
-              </Pressable>
+              <View style={styles.inputBox}>
+                <TextInput
+                  value={draft}
+                  onChangeText={onDraftChange}
+                  placeholder="说点什么..."
+                  placeholderTextColor={colors.ink30}
+                  style={styles.input}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  editable={!isSending}
+                />
+              </View>
+              <View style={styles.actionButtons}>
+                <Pressable style={styles.micButton} onPress={() => {}}>
+                  <Ionicons name="mic-outline" size={18} color={colors.ink60} />
+                </Pressable>
+                <Pressable
+                  style={[styles.sendButton, (!draft.trim() || isSending) && styles.sendButtonDisabled]}
+                  disabled={!draft.trim() || isSending}
+                  onPress={onSend}
+                >
+                  <Ionicons name="send" size={16} color="#fff" />
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
@@ -300,9 +303,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputSection: {
-    paddingTop: 10,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingHorizontal: 12,
   },
   inputRow: {
     flexDirection: 'row',
@@ -312,13 +314,25 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.ink10,
-    paddingLeft: 10,
-    paddingRight: 8,
-    paddingVertical: 10,
+    padding: 12,
+  },
+  inputBox: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 110,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    backgroundColor: colors.sandLight,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   micButton: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -328,18 +342,18 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 56,
-    maxHeight: 112,
+    minHeight: 40,
+    maxHeight: 110,
     color: colors.ink,
     fontFamily: 'DMSans_400Regular',
     fontSize: 15,
     paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   sendButton: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: radius.full,
     backgroundColor: colors.orange,
     alignItems: 'center',
