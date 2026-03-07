@@ -44,3 +44,4 @@ packages/db/prisma/migrations/
 
 # OS
 Thumbs.db
+packages/api/scripts/
