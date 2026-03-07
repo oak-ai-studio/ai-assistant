@@ -2,12 +2,20 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['tests/**/*.test.ts'],
     environment: 'node',
+    include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['src/services/memory/**/*.ts', 'src/routers/memory.ts'],
+      reporter: ['text', 'lcov', 'html'],
+      include: [
+        'src/routers/chat.ts',
+        'src/routers/memory.ts',
+        'src/services/chat/chat-service.ts',
+        'src/services/chat/system-prompt.ts',
+        'src/services/llm/factory.ts',
+        'src/services/llm/openai-provider.ts',
+        'src/services/memory/**/*.ts',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,
