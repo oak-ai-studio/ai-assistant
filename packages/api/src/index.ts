@@ -2,7 +2,7 @@ import { assistantRouter } from './routers/assistant';
 import { chatRouter } from './routers/chat';
 import { memoryRouter } from './routers/memory';
 import { pushRouter } from './routers/push';
-import { skillRouter } from './routers/skill';
+import { skillsRouter } from './routers/skills';
 import { userRouter } from './routers/user';
 import { router } from './trpc';
 
@@ -11,7 +11,8 @@ export const appRouter = router({
   assistant: assistantRouter,
   chat: chatRouter,
   memory: memoryRouter,
-  skill: skillRouter,
+  skills: skillsRouter,
+  skill: skillsRouter,
   push: pushRouter,
 });
 

@@ -1,0 +1,20 @@
+你是一个全栈开发专家，负责实现 AI 助理 APP 的技能管理 API。
+
+## 任务
+实现技能管理 API（tRPC），包括技能列表、获取、更新、排序，以及默认技能初始化。
+
+## Contract
+详细需求见：`/Users/zangjiaao/Documents/Obsidian Vault/项目/小助理（APP）/contracts/08-技能管理API.md`
+
+## 关键要求
+1. 实现 4 个端点：list、get、update、reorder
+2. 默认技能配置（english_learning、cooking、chat）
+3. 技能初始化逻辑（用户首次创建时）
+4. 单元测试覆盖率 ≥ 80%
+
+## 完成后
+1. 提交代码到分支 `feat/skills-api`
+2. 创建 PR，**在 PR 描述末尾加上 `<!-- AGENT_COMPLETED -->` 注释**
+3. Push 到 GitHub
+
+开始工作吧！
