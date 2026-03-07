@@ -78,6 +78,7 @@ export const authRouter = router({
         select: {
           id: true,
           phone: true,
+          onboardingCompleted: true,
         },
       });
 

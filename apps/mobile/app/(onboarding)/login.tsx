@@ -87,7 +87,7 @@ export default function LoginScreen() {
         user: result.user,
       });
 
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch {
       setError('验证码错误或已过期，请重新获取。');
     } finally {

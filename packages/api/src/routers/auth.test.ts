@@ -75,6 +75,7 @@ describe('authRouter', () => {
     user.upsert.mockResolvedValue({
       id: 'user-1',
       phone: '13800138000',
+      onboardingCompleted: false,
     });
 
     const result = await caller.verifyCode({
@@ -85,6 +86,7 @@ describe('authRouter', () => {
     expect(result.user).toEqual({
       id: 'user-1',
       phone: '13800138000',
+      onboardingCompleted: false,
     });
     expect(result.accessToken).toBeTruthy();
     expect(result.refreshToken).toBeTruthy();

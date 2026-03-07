@@ -5,18 +5,22 @@ import {
   clearTokens,
   getAuthSession,
   getRefreshToken,
+  saveAuthUser,
   saveAuthSession,
   subscribeAuthChanges,
 } from '@/utils/auth';
+import { trpcClient } from '@/utils/trpc';
 
 type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
 type AuthContextValue = {
   status: AuthStatus;
   isAuthenticated: boolean;
+  onboardingCompleted: boolean;
   user: AuthUser | null;
   signIn: (session: AuthSession) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (user: AuthUser) => Promise<void>;
   refreshAuthState: () => Promise<void>;
 };
 
@@ -37,14 +41,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const refreshToken = await getRefreshToken();
 
-    if (refreshToken) {
+    if (!refreshToken) {
       setUser(null);
-      setStatus('authenticated');
+      setStatus('anonymous');
       return;
     }
 
-    setUser(null);
-    setStatus('anonymous');
+    try {
+      const result = await trpcClient.user.me.query();
+      await saveAuthUser(result.user);
+      setUser(result.user);
+      setStatus('authenticated');
+    } catch {
+      await clearTokens();
+      setUser(null);
+      setStatus('anonymous');
+    }
   }, []);
 
   useEffect(() => {
@@ -69,16 +81,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus('anonymous');
   }, []);
 
+  const updateUser = useCallback(async (nextUser: AuthUser) => {
+    await saveAuthUser(nextUser);
+    setUser(nextUser);
+    setStatus('authenticated');
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
       user,
       isAuthenticated: status === 'authenticated',
+      onboardingCompleted: user?.onboardingCompleted === true,
       signIn,
       signOut,
+      updateUser,
       refreshAuthState,
     }),
-    [refreshAuthState, signIn, signOut, status, user],
+    [refreshAuthState, signIn, signOut, status, updateUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

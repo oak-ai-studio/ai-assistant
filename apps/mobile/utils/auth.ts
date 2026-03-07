@@ -8,6 +8,7 @@ const authListeners = new Set<() => void>();
 export type AuthUser = {
   id: string;
   phone: string;
+  onboardingCompleted: boolean;
 };
 
 export type AuthSession = {
@@ -59,6 +60,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
     return {
       id: parsed.id,
       phone: parsed.phone,
+      onboardingCompleted: parsed.onboardingCompleted === true,
     };
   } catch {
     return null;

@@ -8,12 +8,13 @@ datasource db {
 }
 
 model User {
-  id         String      @id @default(uuid())
-  phone      String      @unique
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  assistants Assistant[]
-  memories   Memory[]
+  id                  String      @id @default(uuid())
+  phone               String      @unique
+  onboardingCompleted Boolean     @default(false)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  assistants          Assistant[]
+  memories            Memory[]
 }
 
 model VerificationCode {
