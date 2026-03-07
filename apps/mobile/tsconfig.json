@@ -6,6 +6,15 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@ai-assistant/api": [
+        "../../packages/api/src/index.ts"
+      ],
+      "@ai-assistant/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@ai-assistant/db": [
+        "../../packages/db/src/index.ts"
       ]
     }
   },
