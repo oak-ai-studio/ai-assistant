@@ -124,10 +124,10 @@ export default function LoginScreen() {
               hint="当前版本默认中国大陆 11 位手机号"
             />
 
+            <Text style={[typography.mono, styles.codeLabel]}>验证码</Text>
             <View style={styles.codeRow}>
               <View style={styles.codeInputWrap}>
                 <Input
-                  label="验证码"
                   placeholder="请输入 6 位验证码"
                   value={code}
                   onChangeText={(value) => setCode(value.replace(/\D/g, '').slice(0, 6))}
@@ -196,6 +196,11 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 14,
+  },
+  codeLabel: {
+    color: colors.ink60,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   codeRow: {
     flexDirection: 'row',
