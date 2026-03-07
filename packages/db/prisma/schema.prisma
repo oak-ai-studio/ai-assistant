@@ -25,6 +25,7 @@ model Assistant {
   createdAt     DateTime  @default(now())
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills        Skill[]
+  conversations Conversation[]
   messages      Message[]
 
   @@index([userId])
@@ -63,16 +64,32 @@ model Memory {
   @@index([skillId])
 }
 
-model Message {
+model Conversation {
   id          String    @id @default(cuid())
   assistantId String
-  role        String
-  content     String
-  memoryBased Boolean   @default(false)
+  title       String?
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  endedAt     DateTime?
   assistant   Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+  messages    Message[]
+
+  @@index([assistantId, updatedAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  assistantId    String
+  conversationId String
+  role           String
+  content        String
+  memoryBased    Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  assistant      Assistant    @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([assistantId, createdAt])
+  @@index([conversationId, createdAt])
 }
 
 model Todo {
