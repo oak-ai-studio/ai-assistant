@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -22,9 +23,12 @@ import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
 import { HOME_PAGE_CONTEXT } from '@/constants/page-context';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { TopRightMenu } from '@/components/TopRightMenu';
 import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
-import { ChatDrawer } from '@/components/home/ChatDrawer';
+import { listSkills } from '@/utils/api';
+import { resolveSkillIcon, SKILL_SUBTITLE_MAP } from '@/utils/skills';
+import { useUserId } from '@/utils/userId';
 
 type Reminder = {
   id: string;
@@ -32,49 +36,16 @@ type Reminder = {
   tag: string;
 };
 
-type Skill = {
+type SkillCardItem = {
   id: string;
   name: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   subtitle: string;
 };
 
-type Message = {
-  id: string;
-  role: 'assistant' | 'user';
-  content: string;
-};
-
 const mockReminders: Reminder[] = [
   { id: '1', text: '今天还差 5 个单词就完成目标了', tag: '背单词' },
   { id: '2', text: '你已经连续学习 7 天了，继续加油！', tag: '做饭' },
-];
-
-const mockSkills: Skill[] = [
-  {
-    id: 'chat',
-    name: '随便聊聊',
-    icon: 'chatbubble-ellipses-outline',
-    subtitle: '和我聊聊天吧',
-  },
-  {
-    id: 'vocab',
-    name: '背单词',
-    icon: 'book-outline',
-    subtitle: '今天还差 5 个单词',
-  },
-  {
-    id: 'cooking',
-    name: '做饭助理',
-    icon: 'restaurant-outline',
-    subtitle: '今天吃什么？',
-  },
-];
-
-const mockMessages: Message[] = [
-  { id: '1', role: 'assistant', content: '你好！有什么我可以帮你的吗？' },
-  { id: '2', role: 'user', content: '今天天气怎么样？' },
-  { id: '3', role: 'assistant', content: '今天天气不错，适合出门走走。' },
 ];
 
 const getGreeting = () => {
@@ -124,10 +95,10 @@ export default function HomeScreen() {
     chat?: string;
   }>();
   const { openChat, setPageContext } = useGlobalChat();
+  const { userId, isLoading: userIdLoading } = useUserId();
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [legacyMenuVisible, setLegacyMenuVisible] = useState(false);
-  const [chatVisible, setChatVisible] = useState(false);
 
   const isEmptyState = state === 'empty';
 
@@ -135,10 +106,32 @@ export default function HomeScreen() {
     () => (isEmptyState ? [] : mockReminders).slice(0, 3),
     [isEmptyState]
   );
-  const skills = useMemo(
-    () => (isEmptyState ? mockSkills.filter((skill) => skill.id === 'chat') : mockSkills),
-    [isEmptyState]
-  );
+
+  const skillQuery = useQuery({
+    queryKey: ['skills', 'list', userId],
+    queryFn: () => listSkills({ userId }),
+    enabled: userId.length > 0,
+  });
+
+  const skills = useMemo<SkillCardItem[]>(() => {
+    const source = skillQuery.data?.skills ?? [];
+
+    const activeSkills = source
+      .filter((skill) => skill.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        icon: resolveSkillIcon(skill.id, skill.icon),
+        subtitle: SKILL_SUBTITLE_MAP[skill.id] ?? '开始使用这个技能',
+      }));
+
+    if (isEmptyState) {
+      return activeSkills.filter((skill) => skill.id === 'chat');
+    }
+
+    return activeSkills;
+  }, [isEmptyState, skillQuery.data?.skills]);
 
   const onRouteFromMenu = (route: '/settings/assistant' | '/(tabs)/memory') => {
     setSettingsVisible(false);
@@ -156,11 +149,13 @@ export default function HomeScreen() {
   }, [setPageContext]);
 
   useEffect(() => {
-    setChatVisible(chat === 'open');
-  }, [chat]);
+    if (chat === 'open') {
+      openChat();
+    }
+  }, [chat, openChat]);
 
-  const onSkillPress = (skillId: Skill['id']) => {
-    if (skillId === 'vocab') {
+  const onSkillPress = (skillId: string) => {
+    if (skillId === 'vocab' || skillId === 'vocabulary' || skillId === 'english_learning') {
       router.push('/(tabs)/vocabulary' as never);
       return;
     }
@@ -224,37 +219,63 @@ export default function HomeScreen() {
             )}
           </View>
 
-          <View style={styles.skillGrid}>
-            {skills.map((skill) => (
-              <ScalePressable
-                key={skill.id}
-                style={[styles.skillCard, skills.length === 1 && styles.skillCardSingle]}
-                onPress={() => onSkillPress(skill.id)}
+          {userIdLoading || skillQuery.isLoading ? (
+            <View style={styles.statusCard}>
+              <Text style={[typography.bodyL, styles.statusText]}>技能加载中...</Text>
+            </View>
+          ) : skillQuery.isError ? (
+            <View style={styles.statusCard}>
+              <Text style={[typography.bodyL, styles.statusText]}>技能加载失败，请重试</Text>
+              <Button
+                size="sm"
+                variant="secondary"
+                onPress={() => {
+                  void skillQuery.refetch();
+                }}
               >
-                <View style={styles.skillIconBox}>
-                  <Ionicons name={skill.icon} size={18} color={colors.ink60} style={styles.icon18} />
-                </View>
-                <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
-                <Text
-                  style={[typography.bodyM, styles.skillSubtitle]}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
+                重试
+              </Button>
+            </View>
+          ) : skills.length === 0 ? (
+            <View style={styles.statusCard}>
+              <Text style={[typography.bodyL, styles.statusText]}>暂无可用技能，先去配置助理吧</Text>
+              <Button size="sm" onPress={() => onRouteFromMenu('/settings/assistant')}>
+                去配置
+              </Button>
+            </View>
+          ) : (
+            <View style={styles.skillGrid}>
+              {skills.map((skill) => (
+                <ScalePressable
+                  key={skill.id}
+                  style={[styles.skillCard, skills.length === 1 && styles.skillCardSingle]}
+                  onPress={() => onSkillPress(skill.id)}
                 >
-                  {skill.subtitle}
-                </Text>
-                <View style={styles.skillDot}>
-                  <View style={styles.skillDotCircle}>
-                    <Ionicons
-                      name="chatbubble-ellipses-outline"
-                      size={12}
-                      color={colors.ink60}
-                      style={styles.icon12}
-                    />
+                  <View style={styles.skillIconBox}>
+                    <Ionicons name={skill.icon} size={18} color={colors.ink60} style={styles.icon18} />
                   </View>
-                </View>
-              </ScalePressable>
-            ))}
-          </View>
+                  <Text style={[typography.titleM, styles.skillTitle]}>{skill.name}</Text>
+                  <Text
+                    style={[typography.bodyM, styles.skillSubtitle]}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {skill.subtitle}
+                  </Text>
+                  <View style={styles.skillDot}>
+                    <View style={styles.skillDotCircle}>
+                      <Ionicons
+                        name="chatbubble-ellipses-outline"
+                        size={12}
+                        color={colors.ink60}
+                        style={styles.icon12}
+                      />
+                    </View>
+                  </View>
+                </ScalePressable>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -282,13 +303,6 @@ export default function HomeScreen() {
           </View>
         </Pressable>
       </Modal>
-
-      <ChatDrawer
-        visible={chatVisible}
-        messages={mockMessages}
-        onClose={() => setChatVisible(false)}
-        onCreateConversation={() => setChatVisible(true)}
-      />
     </SafeAreaView>
   );
 }
@@ -344,6 +358,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emptyReminderText: {
+    color: colors.ink60,
+  },
+  statusCard: {
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    padding: 16,
+    gap: 12,
+    alignItems: 'flex-start',
+    ...shadows.sm,
+  },
+  statusText: {
     color: colors.ink60,
   },
   skillGrid: {

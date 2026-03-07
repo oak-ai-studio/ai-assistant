@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { MotiView } from 'moti';
 import { Button } from '@/components/ui/Button';
 import {
@@ -21,18 +22,34 @@ import {
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
+import { listSkills, reorderSkills, updateSkill } from '@/utils/api';
+import {
+  mapAssistantSkillIdToBackend,
+  mapBackendSkillIdToAssistant,
+} from '@/utils/skills';
+import { useUserId } from '@/utils/userId';
 import {
   getAssistantSettings,
   saveAssistantSettings,
 } from '@/utils/assistant-settings';
 
+type SkillLabelMap = Partial<Record<AssistantSkillId, string>>;
+
 function SkillCheckbox({
   label,
   checked,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
   onToggle,
 }: {
   label: string;
   checked: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onToggle: () => void;
 }) {
   return (
@@ -44,12 +61,50 @@ function SkillCheckbox({
         {checked && <Ionicons name="checkmark" size={14} color="#fff" />}
       </View>
       <Text style={[typography.bodyL, styles.skillLabel]}>{label}</Text>
+
+      <View style={styles.orderActions}>
+        <Pressable
+          style={[styles.orderButton, !canMoveUp && styles.orderButtonDisabled]}
+          onPress={onMoveUp}
+          disabled={!canMoveUp}
+        >
+          <Ionicons name="chevron-up" size={14} color={canMoveUp ? colors.ink60 : colors.ink30} />
+        </Pressable>
+        <Pressable
+          style={[styles.orderButton, !canMoveDown && styles.orderButtonDisabled]}
+          onPress={onMoveDown}
+          disabled={!canMoveDown}
+        >
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={canMoveDown ? colors.ink60 : colors.ink30}
+          />
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
 
+const DEFAULT_SKILL_ORDER: AssistantSkillId[] = ASSISTANT_SKILLS.map((skill) => skill.id);
+
+const uniqueSkillOrder = (ids: AssistantSkillId[]) => {
+  const ordered = new Set<AssistantSkillId>();
+
+  for (const id of ids) {
+    ordered.add(id);
+  }
+
+  for (const fallbackId of DEFAULT_SKILL_ORDER) {
+    ordered.add(fallbackId);
+  }
+
+  return [...ordered];
+};
+
 export default function AssistantSettingsScreen() {
   const router = useRouter();
+  const { userId } = useUserId();
   const {
     previewName,
     previewRole,
@@ -66,8 +121,26 @@ export default function AssistantSettingsScreen() {
   const [assistantRole, setAssistantRole] = useState('');
   const [activeSkills, setActiveSkills] = useState<AssistantSkillId[]>([]);
   const [originalSkills, setOriginalSkills] = useState<AssistantSkillId[]>([]);
+  const [skillOrder, setSkillOrder] = useState<AssistantSkillId[]>(DEFAULT_SKILL_ORDER);
+  const [skillLabels, setSkillLabels] = useState<SkillLabelMap>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [apiHydrated, setApiHydrated] = useState(false);
+
+  const skillsQuery = useQuery({
+    queryKey: ['skills', 'list', userId],
+    queryFn: () => listSkills({ userId }),
+    enabled: userId.length > 0,
+  });
+
+  const updateSkillMutation = useMutation({
+    mutationFn: updateSkill,
+  });
+
+  const reorderSkillMutation = useMutation({
+    mutationFn: reorderSkills,
+  });
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -79,15 +152,67 @@ export default function AssistantSettingsScreen() {
       setAssistantRole(previewRole ?? settings.assistantRole);
       setActiveSkills(previewActive.length > 0 ? previewActive : settings.activeSkills);
       setOriginalSkills(previewOriginal.length > 0 ? previewOriginal : settings.activeSkills);
+      setSkillOrder(uniqueSkillOrder(settings.activeSkills));
       setLoading(false);
     };
 
-    loadSettings();
+    void loadSettings();
   }, [previewActiveSkills, previewName, previewOriginalSkills, previewRole]);
 
+  useEffect(() => {
+    if (apiHydrated || !skillsQuery.data?.skills) {
+      return;
+    }
+
+    const mapped = skillsQuery.data.skills
+      .map((skill) => {
+        const mappedId = mapBackendSkillIdToAssistant(skill.id);
+        return mappedId
+          ? {
+              appSkillId: mappedId,
+              sortOrder: skill.sortOrder,
+              name: skill.name,
+              isActive: skill.isActive,
+            }
+          : null;
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    if (mapped.length === 0) {
+      setApiHydrated(true);
+      return;
+    }
+
+    const labels: SkillLabelMap = {};
+    for (const item of mapped) {
+      labels[item.appSkillId] = item.name;
+    }
+
+    const activeFromApi = mapped
+      .filter((item) => item.isActive)
+      .map((item) => item.appSkillId);
+    const orderFromApi = mapped.map((item) => item.appSkillId);
+
+    setSkillLabels(labels);
+    setSkillOrder(uniqueSkillOrder(orderFromApi));
+
+    if (!previewActiveSkills) {
+      setActiveSkills(activeFromApi);
+      setOriginalSkills(activeFromApi);
+    }
+
+    setApiHydrated(true);
+  }, [apiHydrated, previewActiveSkills, skillsQuery.data?.skills]);
+
+  const orderedActiveSkills = useMemo(
+    () => skillOrder.filter((skillId) => activeSkills.includes(skillId)),
+    [activeSkills, skillOrder]
+  );
+
   const newSkills = useMemo(
-    () => activeSkills.filter((skillId) => !originalSkills.includes(skillId)),
-    [activeSkills, originalSkills]
+    () => orderedActiveSkills.filter((skillId) => !originalSkills.includes(skillId)),
+    [orderedActiveSkills, originalSkills]
   );
 
   const hasNewSkills = newSkills.length > 0;
@@ -100,19 +225,62 @@ export default function AssistantSettingsScreen() {
     );
   };
 
+  const moveSkill = (skillId: AssistantSkillId, direction: -1 | 1) => {
+    setSkillOrder((prev) => {
+      const index = prev.indexOf(skillId);
+      const targetIndex = index + direction;
+
+      if (index < 0 || targetIndex < 0 || targetIndex >= prev.length) {
+        return prev;
+      }
+
+      const next = [...prev];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    });
+  };
+
   const handleSubmit = async () => {
     if (saving) {
       return;
     }
 
     setSaving(true);
+    setSubmitError(null);
 
     try {
       await saveAssistantSettings({
         assistantName,
         assistantRole,
-        activeSkills,
+        activeSkills: orderedActiveSkills,
       });
+
+      if (userId) {
+        const skillOrders = skillOrder.map((skillId, index) => ({
+          appSkillId: skillId,
+          backendSkillId: mapAssistantSkillIdToBackend(skillId),
+          sortOrder: index,
+        }));
+
+        await Promise.all(
+          skillOrders.map((item) =>
+            updateSkillMutation.mutateAsync({
+              userId,
+              skillId: item.backendSkillId,
+              isActive: orderedActiveSkills.includes(item.appSkillId),
+              sortOrder: item.sortOrder,
+            })
+          )
+        );
+
+        await reorderSkillMutation.mutateAsync({
+          userId,
+          skillOrders: skillOrders.map((item) => ({
+            skillId: item.backendSkillId,
+            sortOrder: item.sortOrder,
+          })),
+        });
+      }
 
       if (!hasNewSkills) {
         router.replace('/(tabs)');
@@ -126,6 +294,8 @@ export default function AssistantSettingsScreen() {
           step: '0',
         },
       });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : '保存失败，请稍后重试');
     } finally {
       setSaving(false);
     }
@@ -140,6 +310,8 @@ export default function AssistantSettingsScreen() {
       </SafeAreaView>
     );
   }
+
+  const syncingSkills = skillsQuery.isLoading || updateSkillMutation.isPending || reorderSkillMutation.isPending;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -189,17 +361,44 @@ export default function AssistantSettingsScreen() {
 
           <View style={styles.fieldGroup}>
             <Text style={[typography.mono, styles.fieldLabel]}>技能</Text>
+            <Text style={[typography.bodyM, styles.skillTip]}>拖动替代方案：使用上下箭头调整顺序</Text>
+
             <View style={styles.skillListWrap}>
-              {ASSISTANT_SKILLS.map((skill) => (
-                <SkillCheckbox
-                  key={skill.id}
-                  label={skill.name}
-                  checked={activeSkills.includes(skill.id)}
-                  onToggle={() => toggleSkill(skill.id)}
-                />
-              ))}
+              {skillOrder.map((skillId, index) => {
+                const config = ASSISTANT_SKILLS.find((item) => item.id === skillId);
+                if (!config) {
+                  return null;
+                }
+
+                const label = skillLabels[skillId] ?? config.name;
+
+                return (
+                  <SkillCheckbox
+                    key={skillId}
+                    label={label}
+                    checked={activeSkills.includes(skillId)}
+                    canMoveUp={index > 0}
+                    canMoveDown={index < skillOrder.length - 1}
+                    onMoveUp={() => moveSkill(skillId, -1)}
+                    onMoveDown={() => moveSkill(skillId, 1)}
+                    onToggle={() => toggleSkill(skillId)}
+                  />
+                );
+              })}
             </View>
           </View>
+
+          {skillsQuery.isError ? (
+            <View style={styles.errorCard}>
+              <Text style={[typography.bodyM, styles.errorText]}>技能同步失败，请稍后重试</Text>
+            </View>
+          ) : null}
+
+          {submitError ? (
+            <View style={styles.errorCard}>
+              <Text style={[typography.bodyM, styles.errorText]}>{submitError}</Text>
+            </View>
+          ) : null}
         </MotiView>
 
         <MotiView
@@ -208,7 +407,7 @@ export default function AssistantSettingsScreen() {
           transition={{ type: 'spring', damping: 20, stiffness: 100, delay: 120 }}
           style={styles.bottomAction}
         >
-          <Button onPress={handleSubmit} loading={saving}>
+          <Button onPress={handleSubmit} loading={saving || syncingSkills}>
             {hasNewSkills ? '下一项' : '完成'}
           </Button>
         </MotiView>
@@ -282,6 +481,9 @@ const styles = StyleSheet.create({
     minHeight: 94,
     paddingTop: 11,
   },
+  skillTip: {
+    color: colors.ink60,
+  },
   skillListWrap: {
     backgroundColor: colors.offWhite,
     borderRadius: radius.lg,
@@ -322,6 +524,36 @@ const styles = StyleSheet.create({
   },
   skillLabel: {
     color: colors.ink,
+    flex: 1,
+  },
+  orderActions: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  orderButton: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.sandLight,
+  },
+  orderButtonDisabled: {
+    backgroundColor: colors.offWhite,
+  },
+  errorCard: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: 'rgba(217,79,61,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: colors.danger,
   },
   bottomAction: {
     marginTop: 16,
