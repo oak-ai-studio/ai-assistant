@@ -97,7 +97,7 @@ export default function HomeScreen() {
     menu?: string;
     chat?: string;
   }>();
-  const { openChat, setPageContext } = useGlobalChat();
+  const { closeChat, openChat, openChatWithPreset, setPageContext } = useGlobalChat();
   const { signOut } = useAuth();
   const { userId, isLoading: userIdLoading } = useUserId();
 
@@ -190,9 +190,24 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (chat === 'open') {
-      openChat();
+      openChatWithPreset('open');
+      return;
     }
-  }, [chat, openChat]);
+
+    if (chat === 'empty') {
+      openChatWithPreset('empty');
+      return;
+    }
+
+    if (chat === 'full') {
+      openChatWithPreset('full');
+      return;
+    }
+
+    if (chat === 'close') {
+      closeChat();
+    }
+  }, [chat, closeChat, openChatWithPreset]);
 
   useEffect(() => {
     let mounted = true;
