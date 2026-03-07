@@ -127,6 +127,7 @@ export function ChatDrawer({
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
         topInset={topInset}
+        bottomInset={insets.bottom}
         style={styles.sheetRoot}
         backgroundStyle={styles.sheetBackground}
         handleIndicatorStyle={styles.handle}
@@ -167,11 +168,8 @@ export function ChatDrawer({
             <Text style={[typography.bodyM, styles.errorText]}>{errorMessage}</Text>
           ) : null}
 
-          <View style={[styles.inputSection, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={styles.inputSection}>
             <View style={styles.inputRow}>
-              <Pressable style={styles.micButton} onPress={() => {}}>
-                <Ionicons name="mic-outline" size={18} color={colors.ink60} />
-              </Pressable>
               <TextInput
                 value={draft}
                 onChangeText={onDraftChange}
@@ -183,6 +181,9 @@ export function ChatDrawer({
                 textAlignVertical="top"
                 editable={!isSending}
               />
+              <Pressable style={styles.micButton} onPress={() => {}}>
+                <Ionicons name="mic-outline" size={18} color={colors.ink60} />
+              </Pressable>
               <Pressable
                 style={[styles.sendButton, (!draft.trim() || isSending) && styles.sendButtonDisabled]}
                 disabled={!draft.trim() || isSending}
@@ -301,10 +302,11 @@ const styles = StyleSheet.create({
   inputSection: {
     paddingTop: 10,
     paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: 8,
     backgroundColor: colors.offWhite,
     borderRadius: radius.lg,
@@ -323,7 +325,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sandLight,
     borderWidth: 1,
     borderColor: colors.ink10,
-    marginBottom: 2,
   },
   input: {
     flex: 1,
@@ -342,7 +343,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
   },
   sendButtonDisabled: {
     opacity: 0.45,
