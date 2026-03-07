@@ -137,8 +137,6 @@ export default function LoginScreen() {
               </View>
               <View style={styles.sendButtonWrap}>
                 <Button
-                  variant="secondary"
-                  size="sm"
                   onPress={handleSendCode}
                   disabled={!canSendCode}
                   loading={sendingCode}
