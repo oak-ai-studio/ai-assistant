@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MemoryType {
+  preference
+  habit
+  fact
+  weakness
+  progress
+  personality
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+model User {
+  id                  String         @id @default(uuid()) @db.Uuid
+  onboardingCompleted Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  assistants          Assistant[]
+  memories            Memory[]
+  conversations       Conversation[]
+  skills              Skill[]
+}
+
+model Assistant {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  name          String    @default("小助")
+  avatar        String    @default("default")
+  systemPrompt  String    @db.Text
+  pushTimeStart DateTime? @db.Time(0)
+  pushTimeEnd   DateTime? @db.Time(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Memory {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @db.Uuid
+  content      String     @db.Text
+  type         MemoryType
+  skillSource  String?
+  confidence   Float      @default(0.8)
+  isUserEdited Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([skillSource])
+}
+
+model Conversation {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  skillId      String?
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  messageCount Int       @default(0)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@index([userId, startedAt])
+  @@index([skillId])
+}
+
+model Message {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @db.Uuid
+  role           MessageRole
+  content        String       @db.Text
+  pageContext    Json?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Skill {
+  id           String   @id
+  name         String
+  icon         String
+  systemPrompt String   @db.Text
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  userId       String   @db.Uuid
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([userId, sortOrder])
+}

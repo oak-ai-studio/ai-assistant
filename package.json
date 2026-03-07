@@ -12,15 +12,21 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "api:dev": "npm run dev -w @ai-assistant/api-server",
+    "api:build": "npm run build -w @ai-assistant/api-server",
+    "api:migrate": "npm run prisma:migrate -w @ai-assistant/api-server",
+    "api:generate": "npm run prisma:generate -w @ai-assistant/api-server",
     "db:generate": "npm run generate -w @ai-assistant/db",
     "db:migrate": "npm run migrate -w @ai-assistant/db",
     "db:studio": "npm run studio -w @ai-assistant/db"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.23.0",
     "turbo": "^2.5.0",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.29.0"
+    "typescript-eslint": "^8.29.0",
+    "vitest": "^4.0.18"
   }
 }

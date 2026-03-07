@@ -6,13 +6,19 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts"
+    "typecheck": "npm run build -w @ai-assistant/db && tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run --coverage"
   },
   "dependencies": {
     "@ai-assistant/db": "*",
     "@ai-assistant/shared": "*",
     "@trpc/server": "^11.11.0",
+    "openai": "^5.23.1",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
+    "vitest": "^4.0.18"
   }
 }

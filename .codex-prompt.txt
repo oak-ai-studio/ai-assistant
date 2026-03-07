@@ -1,0 +1,28 @@
+你是一个全栈开发专家，负责将 AI 助理 APP 的前端接入后端 API。
+
+## 任务
+配置 tRPC client，接入对话、记忆、技能三个模块的 API，让 App 能真正工作。
+
+## Contract
+详细需求见：`/Users/zangjiaao/Documents/Obsidian Vault/项目/小助理（APP）/contracts/09-前端接入后端API.md`
+
+## 关键要求
+1. 配置 tRPC client（`apps/mobile/utils/trpc.ts`）
+2. 对话功能接入 `/api/chat/sendMessage`
+3. 记忆列表接入 `/api/memory/list`、create、update、delete
+4. 技能列表接入 `/api/skills/list`、update、reorder
+5. 用户 ID 管理（首次启动生成 UUID）
+6. 所有 API 调用有 loading 和 error 处理
+
+## 重要提示
+- API URL 使用环境变量（`EXPO_PUBLIC_API_URL`）
+- 所有请求带上 userId
+- 用户体验流畅（loading、error、empty state）
+
+## 完成后
+1. 提交代码到分支 `feat/frontend-api-integration`
+2. 创建 PR，**在 PR 描述末尾加上 `<!-- AGENT_COMPLETED -->` 注释**
+3. Push 到 GitHub
+4. PR 描述包含截图（对话、记忆列表、技能列表）
+
+开始工作吧！
