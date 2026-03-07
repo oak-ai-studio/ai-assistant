@@ -1,6 +1,6 @@
 import type { MemoryType } from '@ai-assistant/shared';
 import type { PageContextPayload } from '@/constants/page-context';
-import { apiRequest } from '@/utils/trpc';
+import { apiRequest, ApiRequestError, trpcClient } from '@/utils/trpc';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -36,6 +36,21 @@ const asNumber = (value: unknown, fallback = 0): number =>
 
 const asBoolean = (value: unknown, fallback = false): boolean =>
   typeof value === 'boolean' ? value : fallback;
+
+const isApiPathFallbackError = (error: unknown): boolean => {
+  if (error instanceof ApiRequestError) {
+    return error.status === 404 || error.status === 405 || error.status === 500;
+  }
+
+  if (error instanceof Error) {
+    return (
+      error.message.includes('接口返回格式错误') ||
+      error.message.includes('Unexpected token')
+    );
+  }
+
+  return false;
+};
 
 export type ChatSendMessageInput = {
   userId: string;
@@ -213,14 +228,18 @@ export type SkillItem = {
 
 const toSkillItem = (value: unknown): SkillItem => {
   const payload = isRecord(value) ? value : {};
+  const rawActive =
+    payload.isActive ?? payload.enabled ?? payload.active ?? payload.is_active;
+  const rawSortOrder =
+    payload.sortOrder ?? payload.order ?? payload.sort_order;
 
   return {
     id: asString(payload.id),
     name: asString(payload.name),
     icon: asString(payload.icon),
     systemPrompt: asString(payload.systemPrompt),
-    isActive: asBoolean(payload.isActive, true),
-    sortOrder: asNumber(payload.sortOrder, 0),
+    isActive: asBoolean(rawActive, true),
+    sortOrder: asNumber(rawSortOrder, 0),
     createdAt: asString(payload.createdAt, new Date().toISOString()),
     updatedAt: asString(payload.updatedAt, new Date().toISOString()),
   };
@@ -234,11 +253,33 @@ export type ListSkillsInput = {
 export async function listSkills(
   input: ListSkillsInput
 ): Promise<{ skills: SkillItem[] }> {
-  const raw = await apiRequest<unknown>('/api/skills/list', {
-    method: 'GET',
-    query: input,
-  });
-  const payload = unwrapPayload(raw);
+  let payload: unknown;
+  try {
+    const raw = await apiRequest<unknown>('/api/skills/list', {
+      method: 'GET',
+      query: input,
+    });
+    payload = unwrapPayload(raw);
+  } catch (error) {
+    if (!isApiPathFallbackError(error)) {
+      throw error;
+    }
+
+    if (__DEV__) {
+      console.log('[api:listSkills] fallback to tRPC endpoint', {
+        userId: input.userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    try {
+      const result = await trpcClient.skills.list.query(input);
+      payload = result;
+    } catch {
+      const result = await trpcClient.skill.list.query(input);
+      payload = result;
+    }
+  }
 
   if (Array.isArray(payload)) {
     return {
@@ -267,12 +308,38 @@ export type UpdateSkillInput = {
 };
 
 export async function updateSkill(input: UpdateSkillInput): Promise<SkillItem> {
-  const raw = await apiRequest<unknown, UpdateSkillInput>('/api/skills/update', {
-    method: 'POST',
-    body: input,
-  });
+  try {
+    const raw = await apiRequest<unknown, UpdateSkillInput>('/api/skills/update', {
+      method: 'POST',
+      body: input,
+    });
 
-  return toSkillItem(unwrapPayload(raw));
+    const payload = unwrapPayload(raw);
+    if (isRecord(payload) && isRecord(payload.skill)) {
+      return toSkillItem(payload.skill);
+    }
+
+    return toSkillItem(payload);
+  } catch (error) {
+    if (!isApiPathFallbackError(error)) {
+      throw error;
+    }
+
+    if (__DEV__) {
+      console.log('[api:updateSkill] fallback to tRPC endpoint', {
+        userId: input.userId,
+        skillId: input.skillId,
+      });
+    }
+
+    try {
+      const result = await trpcClient.skills.update.mutate(input);
+      return toSkillItem(result.skill);
+    } catch {
+      const result = await trpcClient.skill.update.mutate(input);
+      return toSkillItem(result.skill);
+    }
+  }
 }
 
 export type ReorderSkillsInput = {
@@ -286,15 +353,36 @@ export type ReorderSkillsInput = {
 export async function reorderSkills(
   input: ReorderSkillsInput
 ): Promise<{ success: boolean }> {
-  const raw = await apiRequest<unknown, ReorderSkillsInput>('/api/skills/reorder', {
-    method: 'POST',
-    body: input,
-  });
-  const payload = unwrapPayload(raw);
+  try {
+    const raw = await apiRequest<unknown, ReorderSkillsInput>('/api/skills/reorder', {
+      method: 'POST',
+      body: input,
+    });
+    const payload = unwrapPayload(raw);
 
-  if (!isRecord(payload)) {
+    if (!isRecord(payload)) {
+      return { success: true };
+    }
+
+    return { success: asBoolean(payload.success, true) };
+  } catch (error) {
+    if (!isApiPathFallbackError(error)) {
+      throw error;
+    }
+
+    if (__DEV__) {
+      console.log('[api:reorderSkills] fallback to tRPC endpoint', {
+        userId: input.userId,
+        count: input.skillOrders.length,
+      });
+    }
+
+    try {
+      await trpcClient.skills.reorder.mutate(input);
+    } catch {
+      await trpcClient.skill.reorder.mutate(input);
+    }
+
     return { success: true };
   }
-
-  return { success: asBoolean(payload.success, true) };
 }

@@ -26,8 +26,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { TopRightMenu } from '@/components/TopRightMenu';
 import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
+import { ASSISTANT_SKILLS, type AssistantSkillId } from '@/constants/assistant-config';
 import { listSkills } from '@/utils/api';
 import { resolveSkillIcon, SKILL_SUBTITLE_MAP } from '@/utils/skills';
+import { getAssistantSettings } from '@/utils/assistant-settings';
 import { useUserId } from '@/utils/userId';
 
 type Reminder = {
@@ -99,6 +101,7 @@ export default function HomeScreen() {
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [legacyMenuVisible, setLegacyMenuVisible] = useState(false);
+  const [localActiveSkills, setLocalActiveSkills] = useState<AssistantSkillId[]>([]);
 
   const isEmptyState = state === 'empty';
 
@@ -133,6 +136,34 @@ export default function HomeScreen() {
     return activeSkills;
   }, [isEmptyState, skillQuery.data?.skills]);
 
+  const fallbackSkills = useMemo<SkillCardItem[]>(() => {
+    if (localActiveSkills.length === 0) {
+      return [];
+    }
+
+    return localActiveSkills
+      .map((skillId) => ASSISTANT_SKILLS.find((item) => item.id === skillId))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        icon: skill.icon,
+        subtitle: SKILL_SUBTITLE_MAP[skill.id] ?? skill.desc,
+      }));
+  }, [localActiveSkills]);
+
+  const displaySkills = useMemo(() => {
+    if (skills.length > 0) {
+      return skills;
+    }
+
+    if (fallbackSkills.length > 0) {
+      return fallbackSkills;
+    }
+
+    return [];
+  }, [fallbackSkills, skills]);
+
   const onRouteFromMenu = (route: '/settings/assistant' | '/(tabs)/memory') => {
     setSettingsVisible(false);
     setLegacyMenuVisible(false);
@@ -153,6 +184,49 @@ export default function HomeScreen() {
       openChat();
     }
   }, [chat, openChat]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadLocalSettings = async () => {
+      const settings = await getAssistantSettings();
+      if (!mounted) {
+        return;
+      }
+
+      setLocalActiveSkills(settings.activeSkills);
+    };
+
+    void loadLocalSettings();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!__DEV__) {
+      return;
+    }
+
+    console.log('[HomeScreen] skills debug', {
+      userId,
+      userIdLoading,
+      queryStatus: skillQuery.status,
+      queryError: skillQuery.error instanceof Error ? skillQuery.error.message : null,
+      apiSkills: skillQuery.data?.skills,
+      fallbackSkills: localActiveSkills,
+      finalRenderCount: displaySkills.length,
+    });
+  }, [
+    displaySkills.length,
+    localActiveSkills,
+    skillQuery.data?.skills,
+    skillQuery.error,
+    skillQuery.status,
+    userId,
+    userIdLoading,
+  ]);
 
   const onSkillPress = (skillId: string) => {
     if (skillId === 'vocab' || skillId === 'vocabulary' || skillId === 'english_learning') {
@@ -236,7 +310,7 @@ export default function HomeScreen() {
                 重试
               </Button>
             </View>
-          ) : skills.length === 0 ? (
+          ) : displaySkills.length === 0 ? (
             <View style={styles.statusCard}>
               <Text style={[typography.bodyL, styles.statusText]}>暂无可用技能，先去配置助理吧</Text>
               <Button size="sm" onPress={() => onRouteFromMenu('/settings/assistant')}>
@@ -245,10 +319,10 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.skillGrid}>
-              {skills.map((skill) => (
+              {displaySkills.map((skill) => (
                 <ScalePressable
                   key={skill.id}
-                  style={[styles.skillCard, skills.length === 1 && styles.skillCardSingle]}
+                  style={[styles.skillCard, displaySkills.length === 1 && styles.skillCardSingle]}
                   onPress={() => onSkillPress(skill.id)}
                 >
                   <View style={styles.skillIconBox}>

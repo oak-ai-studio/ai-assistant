@@ -205,6 +205,28 @@ export default function AssistantSettingsScreen() {
     setApiHydrated(true);
   }, [apiHydrated, previewActiveSkills, skillsQuery.data?.skills]);
 
+  useEffect(() => {
+    if (!__DEV__) {
+      return;
+    }
+
+    console.log('[AssistantSettings] skills debug', {
+      userId,
+      queryStatus: skillsQuery.status,
+      queryError: skillsQuery.error instanceof Error ? skillsQuery.error.message : null,
+      apiSkills: skillsQuery.data?.skills,
+      activeSkills,
+      skillOrder,
+    });
+  }, [
+    activeSkills,
+    skillOrder,
+    skillsQuery.data?.skills,
+    skillsQuery.error,
+    skillsQuery.status,
+    userId,
+  ]);
+
   const orderedActiveSkills = useMemo(
     () => skillOrder.filter((skillId) => activeSkills.includes(skillId)),
     [activeSkills, skillOrder]
@@ -261,6 +283,14 @@ export default function AssistantSettingsScreen() {
           backendSkillId: mapAssistantSkillIdToBackend(skillId),
           sortOrder: index,
         }));
+
+        if (__DEV__) {
+          console.log('[AssistantSettings] submit payload', {
+            userId,
+            orderedActiveSkills,
+            skillOrders,
+          });
+        }
 
         await Promise.all(
           skillOrders.map((item) =>
