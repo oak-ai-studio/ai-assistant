@@ -141,7 +141,7 @@ export default function LoginScreen() {
                   disabled={!canSendCode}
                   loading={sendingCode}
                 >
-                  {countdown > 0 ? `${countdown}s` : '发送验证码'}
+                  {countdown > 0 ? `${countdown}s` : '发送'}
                 </Button>
               </View>
             </View>
