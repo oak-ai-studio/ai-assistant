@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type ElementRef } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ElementRef } from 'react';
 import {
   ActivityIndicator,
   ListRenderItem,
@@ -21,6 +21,40 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
+
+type ComposerState = {
+  canSend: boolean;
+  isSending: boolean;
+  onSend: () => void;
+};
+
+const ComposerStateContext = createContext<ComposerState>({
+  canSend: false,
+  isSending: false,
+  onSend: () => {},
+});
+
+function ComposerActions() {
+  const { canSend, onSend } = useContext(ComposerStateContext);
+  return (
+    <View style={styles.actionButtons}>
+      <Pressable style={styles.iconCircle} onPress={() => {}}>
+        <Ionicons name="mic-outline" size={16} color={colors.ink60} />
+      </Pressable>
+      <Pressable
+        style={[
+          styles.iconCircle,
+          styles.sendCircle,
+          !canSend && styles.sendButtonDisabled,
+        ]}
+        disabled={!canSend}
+        onPress={onSend}
+      >
+        <Ionicons name="send" size={14} color="#fff" />
+      </Pressable>
+    </View>
+  );
+}
 
 export type ChatMessage = {
   id: string;
@@ -134,6 +168,12 @@ export function ChatDrawer({
 
   const animatedFooterPosition = useSharedValue(0);
 
+  const canSend = draft.trim().length > 0 && !isSending;
+  const composerState = useMemo<ComposerState>(
+    () => ({ canSend, isSending, onSend: () => onSendRef.current() }),
+    [canSend, isSending]
+  );
+
   const renderFooter = useCallback(
     (props: BottomSheetFooterProps) => {
       animatedFooterPosition.value = 0;
@@ -156,22 +196,7 @@ export function ChatDrawer({
                 textAlignVertical="top"
                 editable={!isSendingRef.current}
               />
-              <View style={styles.actionButtons}>
-                <Pressable style={styles.iconCircle} onPress={() => {}}>
-                  <Ionicons name="mic-outline" size={16} color={colors.ink60} />
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.iconCircle,
-                    styles.sendCircle,
-                    (!draftRef.current.trim() || isSendingRef.current) && styles.sendButtonDisabled,
-                  ]}
-                  disabled={!draftRef.current.trim() || isSendingRef.current}
-                  onPress={() => onSendRef.current()}
-                >
-                  <Ionicons name="send" size={14} color="#fff" />
-                </Pressable>
-              </View>
+              <ComposerActions />
             </View>
           </View>
         </BottomSheetFooter>
@@ -183,30 +208,31 @@ export function ChatDrawer({
   const listFooterHeight = composerBottomPadding + COMPOSER_HEIGHT + 16;
 
   return (
-    <View pointerEvents="box-none" style={styles.portalRoot}>
-      {visible ? (
-        <Pressable style={styles.backdrop} onPress={onClose}>
-          <BlurView intensity={16} tint="dark" style={StyleSheet.absoluteFill} />
-        </Pressable>
-      ) : null}
+    <ComposerStateContext.Provider value={composerState}>
+      <View pointerEvents="box-none" style={styles.portalRoot}>
+        {visible ? (
+          <Pressable style={styles.backdrop} onPress={onClose}>
+            <BlurView intensity={16} tint="dark" style={StyleSheet.absoluteFill} />
+          </Pressable>
+        ) : null}
 
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        snapPoints={snapPoints}
-        enableDynamicSizing={false}
-        enableContentPanningGesture={false}
-        enablePanDownToClose
-        onChange={handleSheetChange}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
-        topInset={topInset}
-        style={styles.sheetRoot}
-        backgroundStyle={styles.sheetBackground}
-        handleIndicatorStyle={styles.handle}
-        footerComponent={renderFooter}
-      >
+        <BottomSheet
+          ref={bottomSheetRef}
+          index={-1}
+          snapPoints={snapPoints}
+          enableDynamicSizing={false}
+          enableContentPanningGesture={false}
+          enablePanDownToClose
+          onChange={handleSheetChange}
+          keyboardBehavior="interactive"
+          keyboardBlurBehavior="restore"
+          android_keyboardInputMode="adjustResize"
+          topInset={topInset}
+          style={styles.sheetRoot}
+          backgroundStyle={styles.sheetBackground}
+          handleIndicatorStyle={styles.handle}
+          footerComponent={renderFooter}
+        >
         <View style={styles.headerRow}>
           <View style={styles.headerSpacer} />
           <Pressable style={styles.addButton} onPress={onCreateConversation}>
@@ -245,8 +271,9 @@ export function ChatDrawer({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         />
-      </BottomSheet>
-    </View>
+        </BottomSheet>
+      </View>
+    </ComposerStateContext.Provider>
   );
 }
 
