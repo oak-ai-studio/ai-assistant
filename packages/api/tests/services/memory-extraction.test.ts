@@ -48,9 +48,7 @@ describe('memory extraction service', () => {
 
     prisma.conversation.findFirst.mockResolvedValue({
       id: 'conversation-1',
-      assistant: {
-        userId: 'user-1',
-      },
+      userId: 'user-1',
     });
     prisma.message.findMany.mockResolvedValue([
       { role: 'user', content: '我最近开始晨读英语。' },
@@ -79,7 +77,7 @@ describe('memory extraction service', () => {
       2,
       expect.objectContaining({
         data: expect.objectContaining({
-          type: 'experience',
+          type: 'progress',
         }),
       }),
     );
@@ -114,9 +112,7 @@ describe('memory extraction service', () => {
 
     prisma.conversation.findFirst.mockResolvedValue({
       id: 'conversation-1',
-      assistant: {
-        userId: 'user-1',
-      },
+      userId: 'user-1',
     });
     prisma.message.findMany.mockResolvedValue([
       { role: 'user', content: '你好' },
@@ -195,7 +191,7 @@ describe('memory extraction service', () => {
     const prisma = createPrismaMock();
     prisma.conversation.findFirst.mockResolvedValue({
       id: 'conversation-1',
-      assistant: { userId: 'user-1' },
+      userId: 'user-1',
     });
     prisma.message.findMany.mockResolvedValue([
       { role: 'user', content: 'hello' },

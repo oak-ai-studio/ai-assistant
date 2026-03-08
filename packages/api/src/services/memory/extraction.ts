@@ -4,7 +4,13 @@ import { MEMORY_DEDUP_SIMILARITY_THRESHOLD } from './constants';
 
 type MemoryExtractionPrisma = Pick<PrismaClient, 'conversation' | 'message' | 'memory'>;
 
-type ExtractedMemoryType = 'preference' | 'fact' | 'experience' | 'other';
+type ExtractedMemoryType =
+  | 'preference'
+  | 'habit'
+  | 'fact'
+  | 'weakness'
+  | 'progress'
+  | 'personality';
 
 interface ExtractedMemoryItem {
   type: ExtractedMemoryType;
@@ -36,33 +42,35 @@ const MAX_EXTRACTED_MEMORIES = 8;
 const EXTRACTION_SYSTEM_PROMPT = [
   '你是记忆提取器，只负责从对话中提取“用户画像与长期记忆”。',
   '请严格输出 JSON 数组，不要 Markdown，不要解释。',
-  '每条记忆结构：{ "type": "preference|fact|experience|other", "content": "string", "confidence": 0-1 }',
+  '每条记忆结构：{ "type": "preference|habit|fact|weakness|progress|personality", "content": "string", "confidence": 0-1 }',
   'type 说明：',
-  '- preference: 偏好、习惯、长期倾向',
+  '- preference/habit: 偏好、习惯、长期倾向',
   '- fact: 稳定事实信息',
-  '- experience: 用户经历、事件、故事',
-  '- other: 其他有长期价值的信息',
+  '- progress: 用户经历、事件、阶段进展',
+  '- weakness/personality: 需要长期记住的弱项或性格特征',
   '过滤规则：忽略一次性寒暄、低价值噪音、AI 自己说的话。',
   `最多输出 ${MAX_EXTRACTED_MEMORIES} 条。`,
 ].join('\n');
 
 const TYPE_ALIAS_MAP: Record<string, ExtractedMemoryType> = {
   preference: 'preference',
+  habit: 'habit',
   fact: 'fact',
-  experience: 'experience',
-  other: 'other',
-  habit: 'preference',
-  progress: 'experience',
-  personality: 'other',
-  weakness: 'other',
+  weakness: 'weakness',
+  progress: 'progress',
+  personality: 'personality',
+  experience: 'progress',
+  other: 'personality',
   偏好: 'preference',
   喜好: 'preference',
-  习惯: 'preference',
+  习惯: 'habit',
   事实: 'fact',
-  经验: 'experience',
-  经历: 'experience',
-  故事: 'experience',
-  其他: 'other',
+  经验: 'progress',
+  经历: 'progress',
+  故事: 'progress',
+  弱项: 'weakness',
+  性格: 'personality',
+  其他: 'personality',
 };
 
 export function scheduleConversationMemoryExtraction(input: ScheduleMemoryExtractionInput): void {

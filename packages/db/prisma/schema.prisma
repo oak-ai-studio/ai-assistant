@@ -8,17 +8,19 @@ datasource db {
 }
 
 model User {
-  id                  String      @id @default(uuid())
-  phone               String      @unique
-  onboardingCompleted Boolean     @default(false)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id                  String         @id @default(uuid()) @db.Uuid
+  phone               String         @unique
+  onboardingCompleted Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
   assistants          Assistant[]
   memories            Memory[]
+  conversations       Conversation[]
+  skills              Skill[]
 }
 
 model VerificationCode {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @db.Uuid
   phone     String
   code      String
   expiresAt DateTime
@@ -28,91 +30,89 @@ model VerificationCode {
 }
 
 model Assistant {
-  id            String    @id @default(cuid())
-  userId        String
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
   name          String    @default("小助")
   avatar        String    @default("default")
-  systemPrompt  String?
-  pushTimeStart String?
-  pushTimeEnd   String?
+  systemPrompt  String    @db.Text
+  pushTimeStart DateTime? @db.Time(0)
+  pushTimeEnd   DateTime? @db.Time(0)
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skills        Skill[]
-  conversations Conversation[]
-  messages      Message[]
 
   @@index([userId])
 }
 
+enum MemoryType {
+  preference
+  habit
+  fact
+  weakness
+  progress
+  personality
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
 model Skill {
-  id           String    @id @default(cuid())
-  assistantId  String
+  id           String   @id
   name         String
   icon         String
-  systemPrompt String
-  isActive     Boolean   @default(true)
-  order        Int       @default(0)
-  createdAt    DateTime  @default(now())
-  assistant    Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
-  memories     Memory[]
-  todos        Todo[]
+  systemPrompt String   @db.Text
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  userId       String   @db.Uuid
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([assistantId, isActive])
+  @@index([userId, isActive])
+  @@index([userId, sortOrder])
 }
 
 model Memory {
-  id           String    @id @default(cuid())
-  userId       String
-  skillId      String?
-  content      String
-  type         String
-  confidence   Float     @default(0.8)
-  isUserEdited Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skill        Skill?    @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @db.Uuid
+  content      String     @db.Text
+  type         MemoryType
+  skillSource  String?
+  confidence   Float      @default(0.8)
+  isUserEdited Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
-  @@index([skillId])
+  @@index([skillSource])
 }
 
 model Conversation {
-  id          String    @id @default(cuid())
-  assistantId String
-  title       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  endedAt     DateTime?
-  assistant   Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
-  messages    Message[]
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  skillId      String?
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  messageCount Int       @default(0)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     Message[]
 
-  @@index([assistantId, updatedAt])
+  @@index([userId, startedAt])
+  @@index([skillId])
 }
 
 model Message {
-  id             String       @id @default(cuid())
-  assistantId    String
-  conversationId String
-  role           String
-  content        String
-  memoryBased    Boolean      @default(false)
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @db.Uuid
+  role           MessageRole
+  content        String       @db.Text
+  pageContext    Json?
   createdAt      DateTime     @default(now())
-  assistant      Assistant    @relation(fields: [assistantId], references: [id], onDelete: Cascade)
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  @@index([assistantId, createdAt])
   @@index([conversationId, createdAt])
-}
-
-model Todo {
-  id          String   @id @default(cuid())
-  skillId     String
-  content     String
-  priority    String   @default("medium")
-  isCompleted Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
-
-  @@index([skillId, isCompleted])
 }

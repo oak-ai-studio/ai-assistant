@@ -12,6 +12,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --",
+    "prepare": "npm run db:generate",
+    "postinstall": "npm run db:generate",
     "api:dev": "npm run dev -w @ai-assistant/api-server",
     "api:build": "npm run build -w @ai-assistant/api-server",
     "api:migrate": "npm run prisma:migrate -w @ai-assistant/api-server",

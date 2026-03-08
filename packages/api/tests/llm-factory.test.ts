@@ -12,17 +12,27 @@ describe('createChatLLMProvider', () => {
     expect(typeof provider.generateReply).toBe('function');
   });
 
+  it('creates Anthropic provider when configured', () => {
+    const provider = createChatLLMProvider({
+      provider: 'anthropic',
+      anthropicApiKey: 'test-key',
+    });
+
+    expect(provider).toBeDefined();
+    expect(typeof provider.generateReply).toBe('function');
+  });
+
   it('throws CONFIG_ERROR for unsupported provider', () => {
     expect(() =>
       createChatLLMProvider({
-        provider: 'anthropic',
+        provider: 'invalid',
         openAIApiKey: 'test-key',
       }),
     ).toThrowError(LLMProviderError);
 
     expect(() =>
       createChatLLMProvider({
-        provider: 'anthropic',
+        provider: 'invalid',
         openAIApiKey: 'test-key',
       }),
     ).toThrow(/Unsupported LLM provider/);
