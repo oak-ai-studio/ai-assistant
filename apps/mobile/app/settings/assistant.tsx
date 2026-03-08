@@ -23,11 +23,7 @@ import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
 import { listSkills, reorderSkills, updateSkill } from '@/utils/api';
-import {
-  mapAssistantSkillIdToBackend,
-  mapBackendSkillIdToAssistant,
-} from '@/utils/skills';
-import { useUserId } from '@/utils/userId';
+import { mapBackendSkillToAssistant } from '@/utils/skills';
 import {
   getAssistantSettings,
   saveAssistantSettings,
@@ -105,8 +101,8 @@ const uniqueSkillOrder = (ids: AssistantSkillId[]) => {
 
 export default function AssistantSettingsScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
-  const { userId } = useUserId();
+  const { user, signOut } = useAuth();
+  const userId = user?.id ?? '';
   const {
     previewName,
     previewRole,
@@ -125,6 +121,7 @@ export default function AssistantSettingsScreen() {
   const [originalSkills, setOriginalSkills] = useState<AssistantSkillId[]>([]);
   const [skillOrder, setSkillOrder] = useState<AssistantSkillId[]>(DEFAULT_SKILL_ORDER);
   const [skillLabels, setSkillLabels] = useState<SkillLabelMap>({});
+  const [backendIdMap, setBackendIdMap] = useState<Partial<Record<AssistantSkillId, string>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -168,10 +165,11 @@ export default function AssistantSettingsScreen() {
 
     const mapped = skillsQuery.data.skills
       .map((skill) => {
-        const mappedId = mapBackendSkillIdToAssistant(skill.id);
-        return mappedId
+        const appId = mapBackendSkillToAssistant(skill);
+        return appId
           ? {
-              appSkillId: mappedId,
+              appSkillId: appId,
+              backendId: skill.id,
               sortOrder: skill.sortOrder,
               name: skill.name,
               isActive: skill.isActive,
@@ -187,8 +185,10 @@ export default function AssistantSettingsScreen() {
     }
 
     const labels: SkillLabelMap = {};
+    const idMap: Partial<Record<AssistantSkillId, string>> = {};
     for (const item of mapped) {
       labels[item.appSkillId] = item.name;
+      idMap[item.appSkillId] = item.backendId;
     }
 
     const activeFromApi = mapped
@@ -197,6 +197,7 @@ export default function AssistantSettingsScreen() {
     const orderFromApi = mapped.map((item) => item.appSkillId);
 
     setSkillLabels(labels);
+    setBackendIdMap(idMap);
     setSkillOrder(uniqueSkillOrder(orderFromApi));
 
     if (!previewActiveSkills) {
@@ -280,38 +281,47 @@ export default function AssistantSettingsScreen() {
       });
 
       if (userId) {
-        const skillOrders = skillOrder.map((skillId, index) => ({
-          appSkillId: skillId,
-          backendSkillId: mapAssistantSkillIdToBackend(skillId),
-          sortOrder: index,
-        }));
+        const skillOrders = skillOrder
+          .map((skillId, index) => {
+            const backendId = backendIdMap[skillId];
+            if (!backendId) return null;
+            return {
+              appSkillId: skillId,
+              backendSkillId: backendId,
+              sortOrder: index,
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
         if (__DEV__) {
           console.log('[AssistantSettings] submit payload', {
             userId,
             orderedActiveSkills,
             skillOrders,
+            backendIdMap,
           });
         }
 
-        await Promise.all(
-          skillOrders.map((item) =>
-            updateSkillMutation.mutateAsync({
-              userId,
-              skillId: item.backendSkillId,
-              isActive: orderedActiveSkills.includes(item.appSkillId),
-              sortOrder: item.sortOrder,
-            })
-          )
-        );
+        if (skillOrders.length > 0) {
+          await Promise.all(
+            skillOrders.map((item) =>
+              updateSkillMutation.mutateAsync({
+                userId,
+                skillId: item.backendSkillId,
+                isActive: orderedActiveSkills.includes(item.appSkillId),
+                sortOrder: item.sortOrder,
+              })
+            )
+          );
 
-        await reorderSkillMutation.mutateAsync({
-          userId,
-          skillOrders: skillOrders.map((item) => ({
-            skillId: item.backendSkillId,
-            sortOrder: item.sortOrder,
-          })),
-        });
+          await reorderSkillMutation.mutateAsync({
+            userId,
+            skillOrders: skillOrders.map((item) => ({
+              skillId: item.backendSkillId,
+              sortOrder: item.sortOrder,
+            })),
+          });
+        }
       }
 
       if (!hasNewSkills) {
@@ -597,5 +607,6 @@ const styles = StyleSheet.create({
   },
   bottomAction: {
     marginTop: 16,
+    gap: 12,
   },
 });
