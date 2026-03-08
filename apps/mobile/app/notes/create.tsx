@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { MemoryType } from '@ai-assistant/shared';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MemoryTypeTag } from '@/components/MemoryTypeTag';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
-import { MEMORY_TYPE_OPTIONS } from '@/constants/memory';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
-import { MEMORY_CREATE_PAGE_CONTEXT } from '@/constants/page-context';
+import { NOTE_CREATE_PAGE_CONTEXT } from '@/constants/page-context';
 import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
-export default function CreateMemoryScreen() {
+const TITLE_MAX_LENGTH = 40;
+const CONTENT_MAX_LENGTH = 1000;
+
+export default function CreateNoteScreen() {
   const router = useRouter();
   const { setPageContext } = useGlobalChat();
   const queryClient = useQueryClient();
@@ -26,47 +26,48 @@ export default function CreateMemoryScreen() {
   const userId = user?.id ?? '';
   const { toast, showToast, hideToast } = useToast();
 
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [type, setType] = useState<MemoryType>('preference');
 
   useEffect(() => {
     setPageContext({
-      ...MEMORY_CREATE_PAGE_CONTEXT,
+      ...NOTE_CREATE_PAGE_CONTEXT,
       data: {
-        ...MEMORY_CREATE_PAGE_CONTEXT.data,
-        memory_type: type,
+        ...NOTE_CREATE_PAGE_CONTEXT.data,
+        draft_title_length: title.trim().length,
         draft_content_length: content.trim().length,
       },
     });
-  }, [content, setPageContext, type]);
+  }, [content, setPageContext, title]);
 
   const createMutation = useMutation({
-    mutationFn: (payload: { content: string; type: MemoryType }) =>
-      trpcClient.memory.create.mutate({
+    mutationFn: (payload: { title?: string; content: string }) =>
+      trpcClient.notes.create.mutate({
         userId,
+        title: payload.title,
         content: payload.content,
-        type: payload.type,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['memory', 'list', userId] });
+      await queryClient.invalidateQueries({ queryKey: ['notes', 'list', userId] });
       router.back();
     },
     onError: (error) => {
-      showToast(getErrorMessage(error, '创建记忆失败'));
+      showToast(getErrorMessage(error, '创建笔记失败'));
     },
   });
 
   const handleSave = async () => {
     const nextContent = content.trim();
+    const nextTitle = title.trim();
 
     if (!userId || nextContent.length === 0) {
-      showToast('请输入记忆内容');
+      showToast('请输入笔记内容');
       return;
     }
 
     await createMutation.mutateAsync({
+      title: nextTitle.length > 0 ? nextTitle : undefined,
       content: nextContent,
-      type,
     });
   };
 
@@ -80,7 +81,7 @@ export default function CreateMemoryScreen() {
           </Pressable>
         </View>
 
-        <Text style={[typography.titleL, styles.title]}>创建记忆</Text>
+        <Text style={[typography.titleL, styles.title]}>创建笔记</Text>
 
         <ScrollView
           style={styles.form}
@@ -89,32 +90,35 @@ export default function CreateMemoryScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.section}>
+            <Text style={[typography.mono, styles.sectionLabel]}>标题</Text>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="给笔记起个标题（可选）"
+              placeholderTextColor={colors.ink30}
+              maxLength={TITLE_MAX_LENGTH}
+              style={styles.titleInput}
+            />
+            <Text style={[typography.caption, styles.counter]}>
+              {title.trim().length}/{TITLE_MAX_LENGTH}
+            </Text>
+          </View>
+
+          <View style={styles.section}>
             <Text style={[typography.mono, styles.sectionLabel]}>内容</Text>
             <TextInput
               value={content}
               onChangeText={setContent}
-              placeholder="例如：我更喜欢晚上学习"
+              placeholder="快速记录你的想法"
               placeholderTextColor={colors.ink30}
               multiline
-              maxLength={200}
+              maxLength={CONTENT_MAX_LENGTH}
               style={styles.contentInput}
               textAlignVertical="top"
             />
-            <Text style={[typography.caption, styles.counter]}>{content.trim().length}/200</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[typography.mono, styles.sectionLabel]}>类型</Text>
-            <View style={styles.typeRow}>
-              {MEMORY_TYPE_OPTIONS.map((item) => (
-                <MemoryTypeTag
-                  key={item}
-                  type={item}
-                  selected={type === item}
-                  onPress={() => setType(item)}
-                />
-              ))}
-            </View>
+            <Text style={[typography.caption, styles.counter]}>
+              {content.trim().length}/{CONTENT_MAX_LENGTH}
+            </Text>
           </View>
         </ScrollView>
 
@@ -187,8 +191,19 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
+  titleInput: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    backgroundColor: colors.sandLight,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 14,
+    color: colors.ink,
+  },
   contentInput: {
-    minHeight: 130,
+    minHeight: 140,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.ink10,
@@ -202,10 +217,5 @@ const styles = StyleSheet.create({
   counter: {
     color: colors.ink60,
     textAlign: 'right',
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
   },
 });

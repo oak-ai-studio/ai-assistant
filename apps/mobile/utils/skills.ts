@@ -10,6 +10,8 @@ const BACKEND_TO_FRONTEND_SKILL_ID: Record<string, AssistantSkillId> = {
   chat: 'chat',
   cooking: 'cooking',
   news: 'news',
+  notes: 'notes',
+  note: 'notes',
 };
 
 const BACKEND_NAME_TO_FRONTEND_SKILL_ID: Record<string, AssistantSkillId> = {
@@ -17,6 +19,7 @@ const BACKEND_NAME_TO_FRONTEND_SKILL_ID: Record<string, AssistantSkillId> = {
   '随便聊聊': 'chat',
   '做饭助理': 'cooking',
   '看新闻': 'news',
+  '笔记': 'notes',
 };
 
 const SKILL_ICON_MAP: Record<string, IoniconName> = {
@@ -26,6 +29,8 @@ const SKILL_ICON_MAP: Record<string, IoniconName> = {
   chat: 'chatbubble-ellipses-outline',
   cooking: 'restaurant-outline',
   news: 'newspaper-outline',
+  notes: 'document-text-outline',
+  note: 'document-text-outline',
 };
 
 export const SKILL_SUBTITLE_MAP: Record<string, string> = {
@@ -34,6 +39,7 @@ export const SKILL_SUBTITLE_MAP: Record<string, string> = {
   english_learning: '开始今天的单词练习',
   cooking: '今天吃什么？',
   news: '快速查看重点资讯',
+  notes: '随手记录你的想法',
 };
 
 export const mapBackendSkillToAssistant = (

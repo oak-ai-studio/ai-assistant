@@ -8,21 +8,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { MemoryType } from '@ai-assistant/shared';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MemoryCardSkeleton } from '@/components/MemoryCardSkeleton';
-import { MemoryTypeTag } from '@/components/MemoryTypeTag';
+import { NoteCardSkeleton } from '@/components/NoteCardSkeleton';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
-import {
-  MEMORY_TYPE_OPTIONS,
-  type MemoryListItem,
-  formatMemoryDateTime,
-} from '@/constants/memory';
-import { MEMORY_EDIT_PAGE_CONTEXT } from '@/constants/page-context';
+import { formatNoteDateTime, type NoteListItem } from '@/constants/notes';
+import { NOTE_EDIT_PAGE_CONTEXT } from '@/constants/page-context';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
@@ -31,7 +25,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
 
-export default function EditMemoryScreen() {
+const TITLE_MAX_LENGTH = 40;
+const CONTENT_MAX_LENGTH = 1000;
+
+export default function EditNoteScreen() {
   const router = useRouter();
   const { setPageContext } = useGlobalChat();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -40,7 +37,7 @@ export default function EditMemoryScreen() {
   const userId = user?.id ?? '';
   const { toast, showToast, hideToast } = useToast();
 
-  const memoryId = useMemo(() => {
+  const noteId = useMemo(() => {
     if (typeof params.id === 'string') {
       return params.id;
     }
@@ -52,56 +49,58 @@ export default function EditMemoryScreen() {
     return '';
   }, [params.id]);
 
-  const memoryQuery = useQuery({
-    queryKey: ['memory', 'detail', userId, memoryId],
+  const noteQuery = useQuery({
+    queryKey: ['notes', 'detail', userId, noteId],
     queryFn: async () => {
-      const cached = queryClient.getQueryData<{ memories: MemoryListItem[] }>([
-        'memory',
+      const cached = queryClient.getQueryData<{ notes: NoteListItem[] }>([
+        'notes',
         'list',
         userId,
       ]);
-      const cachedMemory = cached?.memories.find((item) => item.id === memoryId);
+      const cachedNote = cached?.notes.find((item) => item.id === noteId);
 
-      if (cachedMemory) {
-        return cachedMemory;
+      if (cachedNote) {
+        return cachedNote;
       }
 
-      const result = await trpcClient.memory.list.query({ userId, limit: 100 });
-      return (result.memories as MemoryListItem[]).find((item) => item.id === memoryId) ?? null;
+      return trpcClient.notes.getById.query({
+        userId,
+        id: noteId,
+      });
     },
-    enabled: userId.length > 0 && memoryId.length > 0,
+    enabled: userId.length > 0 && noteId.length > 0,
   });
 
-  const memory = memoryQuery.data;
+  const note = noteQuery.data;
 
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [type, setType] = useState<MemoryType>('preference');
 
   useEffect(() => {
-    if (!memory) {
+    if (!note) {
       return;
     }
 
-    setContent(memory.content);
-    setType(memory.type);
-  }, [memory]);
+    setTitle(note.title ?? '');
+    setContent(note.content);
+  }, [note]);
 
   useEffect(() => {
-    if (memoryQuery.error) {
-      showToast(getErrorMessage(memoryQuery.error, '加载记忆失败'));
+    if (noteQuery.error) {
+      showToast(getErrorMessage(noteQuery.error, '加载笔记失败'));
     }
-  }, [memoryQuery.error, showToast]);
+  }, [noteQuery.error, showToast]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { content: string; type: MemoryType }) =>
-      trpcClient.memory.update.mutate({
-        id: memoryId,
+    mutationFn: (payload: { title?: string; content?: string }) =>
+      trpcClient.notes.update.mutate({
+        id: noteId,
         userId,
+        title: payload.title,
         content: payload.content,
-        type: payload.type,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['memory'] });
+      await queryClient.invalidateQueries({ queryKey: ['notes'] });
       router.back();
     },
     onError: (error) => {
@@ -111,12 +110,12 @@ export default function EditMemoryScreen() {
 
   const deleteMutation = useMutation({
     mutationFn: () =>
-      trpcClient.memory.delete.mutate({
-        id: memoryId,
+      trpcClient.notes.delete.mutate({
+        id: noteId,
         userId,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['memory'] });
+      await queryClient.invalidateQueries({ queryKey: ['notes'] });
       router.back();
     },
     onError: (error) => {
@@ -124,26 +123,26 @@ export default function EditMemoryScreen() {
     },
   });
 
-  const hasChanges = memory
-    ? content.trim() !== memory.content || type !== memory.type
+  const hasChanges = note
+    ? title.trim() !== (note.title ?? '').trim() || content.trim() !== note.content
     : false;
 
   const handleSave = async () => {
     const nextContent = content.trim();
 
     if (nextContent.length === 0) {
-      showToast('记忆内容不能为空');
+      showToast('笔记内容不能为空');
       return;
     }
 
     await updateMutation.mutateAsync({
+      title: title.trim(),
       content: nextContent,
-      type,
     });
   };
 
   const handleDelete = () => {
-    Alert.alert('删除记忆', '删除后无法恢复，确定删除吗？', [
+    Alert.alert('删除笔记', '删除后无法恢复，确定删除吗？', [
       { text: '取消', style: 'cancel' },
       {
         text: '删除',
@@ -155,19 +154,18 @@ export default function EditMemoryScreen() {
     ]);
   };
 
-  const isLoading = memoryQuery.isLoading && !memoryQuery.data;
+  const isLoading = noteQuery.isLoading && !noteQuery.data;
 
   useEffect(() => {
     setPageContext({
-      ...MEMORY_EDIT_PAGE_CONTEXT,
+      ...NOTE_EDIT_PAGE_CONTEXT,
       data: {
-        ...MEMORY_EDIT_PAGE_CONTEXT.data,
-        memory_id: memoryId,
-        memory_type: type,
+        ...NOTE_EDIT_PAGE_CONTEXT.data,
+        note_id: noteId,
         has_changes: hasChanges,
       },
     });
-  }, [hasChanges, memoryId, setPageContext, type]);
+  }, [hasChanges, noteId, setPageContext]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -179,16 +177,16 @@ export default function EditMemoryScreen() {
           </Pressable>
         </View>
 
-        <Text style={[typography.titleL, styles.title]}>编辑记忆</Text>
+        <Text style={[typography.titleL, styles.title]}>编辑笔记</Text>
 
         {isLoading ? (
           <View style={styles.skeletonWrap}>
-            <MemoryCardSkeleton />
-            <MemoryCardSkeleton />
+            <NoteCardSkeleton />
+            <NoteCardSkeleton />
           </View>
-        ) : !memory ? (
+        ) : !note ? (
           <View style={styles.errorState}>
-            <Text style={[typography.bodyM, styles.errorText]}>这条记忆不存在或已被删除</Text>
+            <Text style={[typography.bodyM, styles.errorText]}>这条笔记不存在或已被删除</Text>
             <Button size="sm" variant="secondary" onPress={() => router.back()}>
               返回列表
             </Button>
@@ -202,37 +200,42 @@ export default function EditMemoryScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.section}>
+                <Text style={[typography.mono, styles.sectionLabel]}>标题</Text>
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="给笔记起个标题（可选）"
+                  placeholderTextColor={colors.ink30}
+                  maxLength={TITLE_MAX_LENGTH}
+                  style={styles.titleInput}
+                />
+                <Text style={[typography.caption, styles.counter]}>
+                  {title.trim().length}/{TITLE_MAX_LENGTH}
+                </Text>
+              </View>
+
+              <View style={styles.section}>
                 <Text style={[typography.mono, styles.sectionLabel]}>内容</Text>
                 <TextInput
                   value={content}
                   onChangeText={setContent}
-                  placeholder="请输入记忆内容"
+                  placeholder="请输入笔记内容"
                   placeholderTextColor={colors.ink30}
                   multiline
-                  maxLength={200}
+                  maxLength={CONTENT_MAX_LENGTH}
                   textAlignVertical="top"
                   style={styles.contentInput}
                 />
-                <Text style={[typography.caption, styles.counter]}>{content.trim().length}/200</Text>
-              </View>
-
-              <View style={styles.section}>
-                <Text style={[typography.mono, styles.sectionLabel]}>类型</Text>
-                <View style={styles.typeRow}>
-                  {MEMORY_TYPE_OPTIONS.map((item) => (
-                    <MemoryTypeTag
-                      key={item}
-                      type={item}
-                      selected={type === item}
-                      onPress={() => setType(item)}
-                    />
-                  ))}
-                </View>
+                <Text style={[typography.caption, styles.counter]}>
+                  {content.trim().length}/{CONTENT_MAX_LENGTH}
+                </Text>
               </View>
 
               <View style={styles.section}>
                 <Text style={[typography.mono, styles.sectionLabel]}>创建时间</Text>
-                <Text style={[typography.bodyM, styles.timeText]}>{formatMemoryDateTime(memory.createdAt)}</Text>
+                <Text style={[typography.bodyM, styles.timeText]}>
+                  {formatNoteDateTime(note.createdAt)}
+                </Text>
               </View>
             </ScrollView>
 
@@ -322,8 +325,19 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
+  titleInput: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.ink10,
+    backgroundColor: colors.sandLight,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 14,
+    color: colors.ink,
+  },
   contentInput: {
-    minHeight: 140,
+    minHeight: 160,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.ink10,
@@ -337,11 +351,6 @@ const styles = StyleSheet.create({
   counter: {
     color: colors.ink60,
     textAlign: 'right',
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
   },
   timeText: {
     color: colors.ink,

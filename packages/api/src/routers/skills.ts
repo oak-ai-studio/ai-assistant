@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import {
   getSkillForUser,
+  initializeDefaultSkillsForAssistant,
   listSkillsForUser,
   reorderSkillsForUser,
   toSkillDto,
@@ -64,6 +65,7 @@ export const skillsRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      await initializeDefaultSkillsForAssistant(ctx.prisma, input.userId);
       const skills = await listSkillsForUser(ctx.prisma, input);
 
       return {

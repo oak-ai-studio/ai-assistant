@@ -35,6 +35,12 @@ const SKILLS = [
     name: '随便聊聊',
     desc: '随时陪你说说话',
   },
+  {
+    id: 'notes',
+    icon: 'document-text-outline' as IoniconName,
+    name: '笔记',
+    desc: '记录灵感，随时回看',
+  },
 ] as const;
 
 type SkillId = typeof SKILLS[number]['id'];

@@ -29,6 +29,8 @@ import {
   saveAssistantSettings,
 } from '@/utils/assistant-settings';
 import { useAuth } from '@/hooks/useAuth';
+import { ASSISTANT_SETTINGS_PAGE_CONTEXT } from '@/constants/page-context';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
 type SkillLabelMap = Partial<Record<AssistantSkillId, string>>;
 
@@ -101,6 +103,7 @@ const uniqueSkillOrder = (ids: AssistantSkillId[]) => {
 
 export default function AssistantSettingsScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
   const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
   const userId = user?.id ?? '';
@@ -230,6 +233,17 @@ export default function AssistantSettingsScreen() {
     skillsQuery.status,
     userId,
   ]);
+
+  useEffect(() => {
+    setPageContext({
+      ...ASSISTANT_SETTINGS_PAGE_CONTEXT,
+      data: {
+        ...ASSISTANT_SETTINGS_PAGE_CONTEXT.data,
+        active_skill_count: activeSkills.length,
+        ordered_skill_ids: skillOrder,
+      },
+    });
+  }, [activeSkills.length, setPageContext, skillOrder]);
 
   const orderedActiveSkills = useMemo(
     () => skillOrder.filter((skillId) => activeSkills.includes(skillId)),

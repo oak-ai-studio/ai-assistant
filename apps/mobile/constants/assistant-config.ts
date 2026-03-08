@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 
-export type AssistantSkillId = 'vocab' | 'chat' | 'cooking' | 'news';
+export type AssistantSkillId = 'vocab' | 'chat' | 'cooking' | 'news' | 'notes';
 
 export type AssistantSkillItem = {
   id: AssistantSkillId;
@@ -40,6 +40,12 @@ export const ASSISTANT_SKILLS: AssistantSkillItem[] = [
     desc: '下厨更轻松，食谱随手得',
   },
   {
+    id: 'notes',
+    icon: 'document-text-outline',
+    name: '笔记',
+    desc: '记录灵感，随时回看',
+  },
+  {
     id: 'news',
     icon: 'newspaper-outline',
     name: '看新闻',
@@ -75,6 +81,16 @@ export const SKILL_INIT_CONFIGS: Record<AssistantSkillId, SkillInitConfig> = {
         id: 'cooking-reminder',
         question: '提醒你购买食材？',
         options: ['是', '否'],
+      },
+    ],
+  },
+  notes: {
+    title: '笔记',
+    questions: [
+      {
+        id: 'notes-style',
+        question: '你希望如何整理笔记？',
+        options: ['按主题', '按时间', '先随手记录'],
       },
     ],
   },
