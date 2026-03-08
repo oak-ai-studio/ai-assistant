@@ -24,5 +24,6 @@ export function buildSystemPrompt(input: BuildSystemPromptInput): string {
     `【第二层：全局记忆】\n${memoryLayer}`,
     `【第三层：当前技能 Prompt】\n${skillLayer}`,
     `【第四层：页面上下文】\n${pageContextLayer}`,
+    '【输出约束】\n仅输出给用户可见的最终回复内容，不要输出思考过程，不要输出 <think> 或 </think> 标签。',
   ].join('\n\n');
 }

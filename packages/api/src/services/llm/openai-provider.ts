@@ -78,7 +78,16 @@ export class OpenAIChatProvider implements ChatLLMProvider {
         },
       );
 
-      const content = completion.choices[0]?.message?.content?.trim();
+      const choices = (completion as { choices?: Array<{ message?: { content?: string | null } }> })
+        ?.choices;
+      if (!Array.isArray(choices) || choices.length === 0) {
+        throw new LLMProviderError(
+          'API_ERROR',
+          'LLM response format is invalid: missing choices[]; please check model/baseURL compatibility.',
+        );
+      }
+
+      const content = choices[0]?.message?.content?.trim();
       if (!content) {
         throw new LLMProviderError('API_ERROR', 'OpenAI returned empty content.');
       }
@@ -130,7 +139,9 @@ function mapOpenAIError(error: unknown): LLMProviderError {
     });
   }
 
-  return new LLMProviderError('UNKNOWN_ERROR', normalized.message ?? 'Unexpected LLM provider error.', {
-    cause: error,
-  });
+  const fallbackMessage =
+    normalized.message ??
+    (error instanceof Error && error.message ? error.message : 'Unexpected LLM provider error.');
+
+  return new LLMProviderError('UNKNOWN_ERROR', fallbackMessage, { cause: error });
 }
