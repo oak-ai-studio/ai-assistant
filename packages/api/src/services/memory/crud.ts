@@ -10,13 +10,11 @@ interface MemoryWithSkill {
   userId: string;
   content: string;
   type: string;
+  skillSource: string | null;
   confidence: number;
   isUserEdited: boolean;
   createdAt: Date;
   updatedAt: Date;
-  skill: {
-    name: string;
-  } | null;
 }
 
 export interface MemoryDetail {
@@ -73,7 +71,7 @@ const toMemoryDetail = (memory: MemoryWithSkill): MemoryDetail => {
     id: memory.id,
     content: memory.content,
     type: memory.type as MemoryType,
-    skillSource: memory.skill?.name ?? null,
+    skillSource: memory.skillSource,
     confidence: memory.confidence,
     isUserEdited: memory.isUserEdited,
     createdAt: memory.createdAt.toISOString(),
@@ -96,40 +94,9 @@ const buildListWhereClause = (input: ListMemoriesInput) => {
     userId: input.userId,
     confidence: { gte: input.minConfidence ?? MIN_CONFIDENCE_THRESHOLD },
     ...(input.type ? { type: input.type } : {}),
-    ...(input.skillSource ? { skill: { is: { name: input.skillSource } } } : {}),
+    ...(input.skillSource ? { skillSource: input.skillSource } : {}),
     ...(input.startDate || input.endDate ? { createdAt } : {}),
   };
-};
-
-const findSkillIdBySource = async (
-  prisma: MemoryServicePrisma,
-  userId: string,
-  skillSource?: string,
-): Promise<string | null> => {
-  if (!skillSource) {
-    return null;
-  }
-
-  const skill = await prisma.skill.findFirst({
-    where: {
-      name: skillSource,
-      assistant: {
-        userId,
-      },
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!skill) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'skillSource does not match any skill under this user',
-    });
-  }
-
-  return skill.id;
 };
 
 export const listMemories = async (
@@ -142,13 +109,6 @@ export const listMemories = async (
   const [memories, total] = await Promise.all([
     prisma.memory.findMany({
       where,
-      include: {
-        skill: {
-          select: {
-            name: true,
-          },
-        },
-      },
       orderBy: {
         createdAt: sortOrder,
       },
@@ -168,22 +128,32 @@ export const createMemory = async (
   prisma: MemoryServicePrisma,
   input: CreateMemoryInput,
 ): Promise<MemoryDetail> => {
-  const skillId = await findSkillIdBySource(prisma, input.userId, input.skillSource);
+  if (input.skillSource) {
+    const skill = await prisma.skill.findFirst({
+      where: {
+        userId: input.userId,
+        name: input.skillSource,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!skill) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'skillSource does not match any skill under this user',
+      });
+    }
+  }
 
   const memory = await prisma.memory.create({
     data: {
       userId: input.userId,
       content: input.content,
       type: input.type,
+      ...(input.skillSource === undefined ? {} : { skillSource: input.skillSource }),
       confidence: input.confidence ?? 0.8,
-      skillId,
-    },
-    include: {
-      skill: {
-        select: {
-          name: true,
-        },
-      },
     },
   });
 
@@ -196,13 +166,6 @@ export const updateMemory = async (
 ): Promise<MemoryDetail> => {
   const existing = await prisma.memory.findUnique({
     where: { id: input.id },
-    include: {
-      skill: {
-        select: {
-          name: true,
-        },
-      },
-    },
   });
 
   if (!existing || existing.userId !== input.userId) {
@@ -238,13 +201,6 @@ export const updateMemory = async (
   const memory = await prisma.memory.update({
     where: { id: input.id },
     data,
-    include: {
-      skill: {
-        select: {
-          name: true,
-        },
-      },
-    },
   });
 
   return toMemoryDetail(memory);

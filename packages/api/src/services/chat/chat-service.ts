@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@ai-assistant/db';
+import type { Prisma, PrismaClient } from '@ai-assistant/db';
 import { buildSystemPrompt } from './system-prompt';
 import type { ChatLLMProvider, ChatMessage } from '../llm';
 
@@ -65,17 +65,19 @@ export async function sendChatMessage(
   }
 
   const conversationId = await getOrCreateConversationId(deps.prisma, {
-    assistantId: assistant.id,
+    userId: input.userId,
     conversationId: input.conversationId,
     firstUserMessage: input.message,
   });
 
   const userMessage = await deps.prisma.message.create({
     data: {
-      assistantId: assistant.id,
       conversationId,
       role: 'user',
       content: input.message,
+      ...(input.pageContext === undefined
+        ? {}
+        : { pageContext: input.pageContext as Prisma.InputJsonValue }),
     },
     select: {
       id: true,
@@ -100,7 +102,7 @@ export async function sendChatMessage(
   });
 
   const skillPrompt = await getSkillPrompt(deps.prisma, {
-    assistantId: assistant.id,
+    userId: input.userId,
     skillId: input.skillId,
   });
 
@@ -119,21 +121,19 @@ export async function sendChatMessage(
     systemPrompt,
     messages: toLLMMessages(historyMessages),
   });
+  const assistantVisibleContent = sanitizeAssistantContent(llmReply.content);
 
   const assistantMessage = await deps.prisma.message.create({
     data: {
-      assistantId: assistant.id,
       conversationId,
       role: 'assistant',
-      content: llmReply.content,
-      memoryBased: Boolean(memoryPrompt.trim()),
+      content: assistantVisibleContent,
     },
     select: {
       id: true,
       role: true,
       content: true,
       createdAt: true,
-      memoryBased: true,
     },
   });
 
@@ -149,7 +149,10 @@ export async function sendChatMessage(
   return {
     conversationId,
     userMessage,
-    assistantMessage,
+    assistantMessage: {
+      ...assistantMessage,
+      memoryBased: Boolean(memoryPrompt.trim()),
+    },
     provider: llmReply.provider,
     model: llmReply.model,
   };
@@ -185,7 +188,7 @@ export async function getConversationMessages(
   const conversation = await deps.prisma.conversation.findFirst({
     where: {
       id: input.conversationId,
-      assistantId: assistant.id,
+      userId: input.userId,
     },
     select: {
       id: true,
@@ -208,21 +211,24 @@ export async function getConversationMessages(
       id: true,
       role: true,
       content: true,
-      memoryBased: true,
       createdAt: true,
     },
   });
 
   return {
     conversationId: conversation.id,
-    messages,
+    messages: messages.map((message) => ({
+      ...message,
+      content: message.role === 'assistant' ? sanitizeAssistantContent(message.content) : message.content,
+      memoryBased: false,
+    })),
   };
 }
 
 async function getOrCreateConversationId(
   prisma: ChatServiceDependencies['prisma'],
   input: {
-    assistantId: string;
+    userId: string;
     conversationId?: string;
     firstUserMessage: string;
   },
@@ -231,7 +237,7 @@ async function getOrCreateConversationId(
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: input.conversationId,
-        assistantId: input.assistantId,
+        userId: input.userId,
       },
       select: {
         id: true,
@@ -247,8 +253,7 @@ async function getOrCreateConversationId(
 
   const createdConversation = await prisma.conversation.create({
     data: {
-      assistantId: input.assistantId,
-      title: input.firstUserMessage.slice(0, 40),
+      userId: input.userId,
     },
     select: {
       id: true,
@@ -260,7 +265,7 @@ async function getOrCreateConversationId(
 
 async function getSkillPrompt(
   prisma: ChatServiceDependencies['prisma'],
-  input: { assistantId: string; skillId?: string },
+  input: { userId: string; skillId?: string },
 ): Promise<string> {
   if (!input.skillId) {
     return '';
@@ -269,7 +274,7 @@ async function getSkillPrompt(
   const skill = await prisma.skill.findFirst({
     where: {
       id: input.skillId,
-      assistantId: input.assistantId,
+      userId: input.userId,
       isActive: true,
     },
     select: {
@@ -288,11 +293,24 @@ function toLLMMessages(messages: Array<{ role: string; content: string }>): Chat
       return [
         {
           role: message.role,
-          content: message.content,
+          content:
+            message.role === 'assistant'
+              ? sanitizeAssistantContent(message.content)
+              : message.content,
         },
       ];
     }
 
     return [];
   });
+}
+
+function sanitizeAssistantContent(content: string): string {
+  // Remove hidden chain-of-thought tags if a provider leaks them.
+  const withoutThinkBlocks = content
+    .replace(/<think\b[^>]*>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think\b[^>]*>[\s\S]*$/gi, '')
+    .trim();
+
+  return withoutThinkBlocks.length > 0 ? withoutThinkBlocks : '抱歉，我刚才没有生成可展示的回复，请再试一次。';
 }

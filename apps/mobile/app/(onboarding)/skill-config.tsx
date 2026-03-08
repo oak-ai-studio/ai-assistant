@@ -10,6 +10,7 @@ import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
 import { trpcClient } from '@/utils/trpc';
+import { useAuth } from '@/hooks/useAuth';
 
 type OnboardingSkillId = 'vocab' | 'cooking' | 'chat';
 
@@ -20,9 +21,6 @@ interface SkillConfig {
   primarySkillSource: string;
   fallbackSkillSource: string;
 }
-
-const ONBOARDING_USER_ID =
-  process.env.EXPO_PUBLIC_ONBOARDING_USER_ID ?? 'onboarding-user';
 
 const SKILL_CONFIGS: Record<OnboardingSkillId, SkillConfig> = {
   vocab: {
@@ -68,6 +66,8 @@ function OptionCard({ label, onSelect, disabled }: {
 
 export default function SkillConfigScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const userId = user?.id;
   const { skills } = useLocalSearchParams<{ skills?: string | string[] }>();
 
   const skillList = useMemo(
@@ -93,9 +93,13 @@ export default function SkillConfigScreen() {
   }
 
   const ensureAssistantReady = async () => {
+    if (!userId) {
+      throw new Error('userId missing');
+    }
+
     if (!bootstrapPromiseRef.current) {
       bootstrapPromiseRef.current = trpcClient.assistant.create
-        .mutate({ userId: ONBOARDING_USER_ID })
+        .mutate({ userId })
         .then(() => undefined)
         .catch(() => undefined)
         .finally(() => {
@@ -122,9 +126,12 @@ export default function SkillConfigScreen() {
 
   const savePreference = async (answer: string) => {
     await ensureAssistantReady();
+    if (!userId) {
+      return;
+    }
 
     const payload = {
-      userId: ONBOARDING_USER_ID,
+      userId,
       content: `我希望${answer}`,
       type: 'preference' as const,
     };

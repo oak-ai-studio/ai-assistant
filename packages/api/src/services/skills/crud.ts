@@ -2,13 +2,14 @@ import type { PrismaClient } from '@ai-assistant/db';
 
 export type SkillRecord = {
   id: string;
-  assistantId: string;
+  userId: string;
   name: string;
   icon: string;
   systemPrompt: string;
   isActive: boolean;
-  order: number;
+  sortOrder: number;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 export type UpdateSkillInput = {
@@ -42,12 +43,10 @@ export const listSkillsForUser = async (
 ): Promise<SkillRecord[]> => {
   return prisma.skill.findMany({
     where: {
-      assistant: {
-        userId: input.userId,
-      },
+      userId: input.userId,
       ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
     },
-    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
   });
 };
 
@@ -58,9 +57,7 @@ export const getSkillForUser = async (
   return prisma.skill.findFirst({
     where: {
       id: input.skillId,
-      assistant: {
-        userId: input.userId,
-      },
+      userId: input.userId,
     },
   });
 };
@@ -83,7 +80,7 @@ export const updateSkillForUser = async (
     icon?: string;
     systemPrompt?: string;
     isActive?: boolean;
-    order?: number;
+    sortOrder?: number;
   } = {};
 
   if (input.name !== undefined) {
@@ -103,7 +100,7 @@ export const updateSkillForUser = async (
   }
 
   if (input.sortOrder !== undefined) {
-    data.order = input.sortOrder;
+    data.sortOrder = input.sortOrder;
   }
 
   return prisma.skill.update({
@@ -127,9 +124,7 @@ export const reorderSkillsForUser = async (
       id: {
         in: skillIds,
       },
-      assistant: {
-        userId: input.userId,
-      },
+      userId: input.userId,
     },
   });
 
@@ -141,7 +136,7 @@ export const reorderSkillsForUser = async (
     input.skillOrders.map((item) =>
       prisma.skill.update({
         where: { id: item.skillId },
-        data: { order: item.sortOrder },
+        data: { sortOrder: item.sortOrder },
       })
     )
   );

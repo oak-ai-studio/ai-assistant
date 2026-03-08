@@ -22,8 +22,8 @@ export const toSkillDto = (skill: SkillRecord): SkillDto => {
     icon: skill.icon,
     systemPrompt: skill.systemPrompt,
     isActive: skill.isActive,
-    sortOrder: skill.order,
+    sortOrder: skill.sortOrder,
     createdAt: skill.createdAt.toISOString(),
-    updatedAt: skill.createdAt.toISOString(),
+    updatedAt: skill.updatedAt.toISOString(),
   };
 };

@@ -80,15 +80,11 @@ export async function extractConversationMemories(input: ScheduleMemoryExtractio
     },
     select: {
       id: true,
-      assistant: {
-        select: {
-          userId: true,
-        },
-      },
+      userId: true,
     },
   });
 
-  if (!conversation?.assistant?.userId) {
+  if (!conversation?.userId) {
     return;
   }
 
@@ -128,7 +124,7 @@ export async function extractConversationMemories(input: ScheduleMemoryExtractio
   }
 
   for (const extracted of extractedMemories) {
-    await deduplicateAndSaveMemory(input.prisma, conversation.assistant.userId, extracted);
+    await deduplicateAndSaveMemory(input.prisma, conversation.userId, extracted);
   }
 }
 

@@ -76,6 +76,12 @@ function toTRPCError(error: unknown): TRPCError {
   }
 
   if (error instanceof LLMProviderError) {
+    console.error('[chat] LLM provider error:', {
+      code: error.code,
+      message: error.message,
+      cause: error.cause,
+    });
+
     if (error.code === 'TIMEOUT') {
       return new TRPCError({
         code: 'TIMEOUT',
