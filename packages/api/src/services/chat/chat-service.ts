@@ -142,7 +142,7 @@ export async function sendChatMessage(
       id: conversationId,
     },
     data: {
-      endedAt: null,
+      endedAt: new Date(),
     },
   });
 

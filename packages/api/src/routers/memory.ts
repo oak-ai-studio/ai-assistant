@@ -20,6 +20,8 @@ export const memoryRouter = router({
         skillSource: z.string().min(1).optional(),
         startDate: z.string().datetime().optional(),
         endDate: z.string().datetime().optional(),
+        minConfidence: z.number().min(0).max(1).optional(),
+        sortOrder: z.enum(['asc', 'desc']).default('desc'),
         limit: z.number().int().min(1).max(100).default(50),
         offset: z.number().int().min(0).default(0),
       }),
@@ -80,11 +82,15 @@ export const memoryRouter = router({
       z.object({
         userId: z.string().min(1),
         query: z.string().trim().min(1),
+        type: memoryTypeSchema.optional(),
+        minConfidence: z.number().min(0).max(1).optional(),
+        semantic: z.boolean().default(false),
         limit: z.number().int().min(1).max(50).default(10),
+        offset: z.number().int().min(0).default(0),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const memories = await searchMemories(ctx.prisma, input.userId, input.query, input.limit);
+      const memories = await searchMemories(ctx.prisma, input);
       return { memories };
     }),
 });

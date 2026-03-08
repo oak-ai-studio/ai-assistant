@@ -55,6 +55,22 @@ export const MEMORY_TYPE_META: Record<
     borderColor: 'rgba(58,140,92,0.2)',
     group: 'fact',
   },
+  experience: {
+    label: '经历',
+    shortLabel: '经历',
+    color: colors.ink,
+    bgColor: colors.sandLight,
+    borderColor: colors.ink10,
+    group: 'experience',
+  },
+  other: {
+    label: '其他',
+    shortLabel: '其他',
+    color: colors.ink60,
+    bgColor: colors.ink05,
+    borderColor: colors.ink10,
+    group: 'other',
+  },
   habit: {
     label: '习惯',
     shortLabel: '经历',
