@@ -20,7 +20,7 @@ import {
   getPageContextForPathname,
 } from '@/constants/page-context';
 import { trpcClient } from '@/utils/trpc';
-import { useUserId } from '@/utils/userId';
+import { useAuth } from '@/hooks/useAuth';
 
 type ChatPreset = 'open' | 'empty' | 'full';
 
@@ -96,7 +96,10 @@ export function GlobalChatProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
-  const { userId, isLoading: userIdLoading, error: userIdError } = useUserId();
+  const { user, status } = useAuth();
+  const userId = user?.id ?? '';
+  const userIdLoading = status === 'loading';
+  const userIdError = !user && status === 'anonymous' ? '用户未登录' : null;
 
   const rootSegment = (segments[0] ?? '') as string;
   const shouldShowGlobalChat = rootSegment !== '(onboarding)';

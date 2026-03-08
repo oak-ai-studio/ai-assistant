@@ -1,4 +1,4 @@
-import { type ComponentRef, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ElementRef } from 'react';
 import {
   ActivityIndicator,
   ListRenderItem,
@@ -62,7 +62,7 @@ export function ChatDrawer({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const listRef = useRef<BottomSheetFlatListMethods | null>(null);
-  const inputRef = useRef<ComponentRef<typeof BottomSheetTextInput> | null>(null);
+  const inputRef = useRef<ElementRef<typeof BottomSheetTextInput> | null>(null);
   const snapPoints = useMemo(() => ['50%', '90%'], []);
   const composerBottomPadding = Math.max(insets.bottom, 12);
 
