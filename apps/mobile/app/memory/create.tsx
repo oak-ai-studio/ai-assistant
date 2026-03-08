@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { MemoryType } from '@ai-assistant/shared';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,11 +19,18 @@ import { useUserId } from '@/utils/userId';
 export default function CreateMemoryScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { userId } = useUserId();
+  const { userId, isLoading: isUserIdLoading, error: userIdError } = useUserId();
   const { toast, showToast, hideToast } = useToast();
 
   const [content, setContent] = useState('');
   const [type, setType] = useState<MemoryType>('preference');
+
+  // Show error toast if userId loading failed
+  useEffect(() => {
+    if (userIdError) {
+      showToast(userIdError);
+    }
+  }, [userIdError, showToast]);
 
   const createMutation = useMutation({
     mutationFn: (payload: { content: string; type: MemoryType }) =>
@@ -107,8 +114,8 @@ export default function CreateMemoryScreen() {
           onPress={() => {
             void handleSave();
           }}
-          loading={createMutation.isPending}
-          disabled={content.trim().length === 0 || userId.length === 0}
+          loading={isUserIdLoading || createMutation.isPending}
+          disabled={content.trim().length === 0 || !!userIdError}
         >
           保存
         </Button>
