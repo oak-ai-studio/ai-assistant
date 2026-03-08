@@ -9,12 +9,10 @@ interface MemoryWithSkill {
   id: string;
   content: string;
   type: string;
+  skillSource: string | null;
   confidence: number;
   createdAt: Date;
   updatedAt: Date;
-  skill: {
-    name: string;
-  } | null;
 }
 
 export interface SearchMemoryItem {
@@ -52,7 +50,7 @@ const toSearchMemoryItem = (memory: MemoryWithSkill, similarity?: number): Searc
     id: memory.id,
     content: memory.content,
     type: memory.type as MemoryType,
-    skillSource: memory.skill?.name ?? null,
+    skillSource: memory.skillSource,
     confidence: memory.confidence,
     createdAt: memory.createdAt.toISOString(),
     ...(typeof similarity === 'number' ? { similarity } : {}),
@@ -142,13 +140,6 @@ async function keywordSearch(
         mode: 'insensitive',
       },
     },
-    include: {
-      skill: {
-        select: {
-          name: true,
-        },
-      },
-    },
     orderBy: [{ confidence: 'desc' }, { createdAt: 'desc' }],
     take: input.limit,
     skip: input.offset ?? 0,
@@ -183,13 +174,6 @@ export const searchMemories = async (
         gte: input.minConfidence ?? MIN_CONFIDENCE_THRESHOLD,
       },
       ...(input.type ? { type: input.type } : {}),
-    },
-    include: {
-      skill: {
-        select: {
-          name: true,
-        },
-      },
     },
     orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
     take: Math.min(200, Math.max(40, (input.limit + (input.offset ?? 0)) * 6)),

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@ai-assistant/db';
 import { DEFAULT_SKILLS } from './default-skills';
 import type { SkillRecord } from './crud';
@@ -8,14 +9,14 @@ export interface SkillsInitPrisma {
   skill: Pick<SkillDelegate, 'findMany' | 'createMany'>;
 }
 
-const DEFAULT_ORDER_BY = [{ order: 'asc' as const }, { createdAt: 'asc' as const }];
+const DEFAULT_ORDER_BY = [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }];
 
 export const initializeDefaultSkillsForAssistant = async (
   prisma: SkillsInitPrisma,
-  assistantId: string
+  userId: string
 ): Promise<SkillRecord[]> => {
   const existingSkills = await prisma.skill.findMany({
-    where: { assistantId },
+    where: { userId },
     orderBy: DEFAULT_ORDER_BY,
   });
 
@@ -25,17 +26,18 @@ export const initializeDefaultSkillsForAssistant = async (
 
   await prisma.skill.createMany({
     data: DEFAULT_SKILLS.map((skill) => ({
-      assistantId,
+      id: randomUUID(),
+      userId,
       name: skill.name,
       icon: skill.icon,
       systemPrompt: skill.systemPrompt,
       isActive: true,
-      order: skill.sortOrder,
+      sortOrder: skill.sortOrder,
     })),
   });
 
   return prisma.skill.findMany({
-    where: { assistantId },
+    where: { userId },
     orderBy: DEFAULT_ORDER_BY,
   });
 };
