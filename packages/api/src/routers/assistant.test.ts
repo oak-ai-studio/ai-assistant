@@ -31,7 +31,7 @@ describe('assistantRouter.create', () => {
           createdAt,
         },
       ]);
-    const createMany = vi.fn().mockResolvedValue({ count: 3 });
+    const createMany = vi.fn().mockResolvedValue({ count: 4 });
 
     const caller = assistantRouter.createCaller({
       prisma: {

@@ -6,7 +6,7 @@ import {
 } from '@/constants/assistant-config';
 
 const ASSISTANT_SETTINGS_KEY = 'assistant-settings';
-const DEFAULT_ACTIVE_SKILLS: AssistantSkillId[] = ['vocab', 'chat', 'cooking'];
+const DEFAULT_ACTIVE_SKILLS: AssistantSkillId[] = ['vocab', 'chat', 'cooking', 'notes'];
 
 export type AssistantSettings = {
   assistantName: string;

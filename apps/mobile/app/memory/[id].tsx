@@ -22,8 +22,10 @@ import {
   type MemoryListItem,
   formatMemoryDateTime,
 } from '@/constants/memory';
+import { MEMORY_EDIT_PAGE_CONTEXT } from '@/constants/page-context';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
@@ -31,6 +33,7 @@ import { trpcClient } from '@/utils/trpc';
 
 export default function EditMemoryScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -153,6 +156,18 @@ export default function EditMemoryScreen() {
   };
 
   const isLoading = memoryQuery.isLoading && !memoryQuery.data;
+
+  useEffect(() => {
+    setPageContext({
+      ...MEMORY_EDIT_PAGE_CONTEXT,
+      data: {
+        ...MEMORY_EDIT_PAGE_CONTEXT.data,
+        memory_id: memoryId,
+        memory_type: type,
+        has_changes: hasChanges,
+      },
+    });
+  }, [hasChanges, memoryId, setPageContext, type]);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -5,9 +6,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { shadows } from '@/constants/shadows';
+import { COOKING_PAGE_CONTEXT } from '@/constants/page-context';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
 export default function CookingPlaceholderScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
+
+  useEffect(() => {
+    setPageContext(COOKING_PAGE_CONTEXT);
+  }, [setPageContext]);
 
   return (
     <SafeAreaView style={styles.container}>

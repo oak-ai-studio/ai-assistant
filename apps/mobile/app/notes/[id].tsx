@@ -16,8 +16,10 @@ import { NoteCardSkeleton } from '@/components/NoteCardSkeleton';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
 import { formatNoteDateTime, type NoteListItem } from '@/constants/notes';
+import { NOTE_EDIT_PAGE_CONTEXT } from '@/constants/page-context';
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
@@ -28,6 +30,7 @@ const CONTENT_MAX_LENGTH = 1000;
 
 export default function EditNoteScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -152,6 +155,17 @@ export default function EditNoteScreen() {
   };
 
   const isLoading = noteQuery.isLoading && !noteQuery.data;
+
+  useEffect(() => {
+    setPageContext({
+      ...NOTE_EDIT_PAGE_CONTEXT,
+      data: {
+        ...NOTE_EDIT_PAGE_CONTEXT.data,
+        note_id: noteId,
+        has_changes: hasChanges,
+      },
+    });
+  }, [hasChanges, noteId, setPageContext]);
 
   return (
     <SafeAreaView style={styles.container}>

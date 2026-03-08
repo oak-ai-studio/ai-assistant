@@ -27,9 +27,12 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
+import { MEMORY_PAGE_CONTEXT } from '@/constants/page-context';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
 export default function MemoryScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
   const { user, status } = useAuth();
   const userId = user?.id ?? '';
   const { toast, showToast, hideToast } = useToast();
@@ -66,6 +69,17 @@ export default function MemoryScreen() {
     activeFilter === 'all'
       ? '先创建一条，帮助助理更了解你。'
       : `「${MEMORY_FILTER_TABS.find((tab) => tab.key === activeFilter)?.label ?? '当前'}」分类下暂无记忆。`;
+
+  useEffect(() => {
+    setPageContext({
+      ...MEMORY_PAGE_CONTEXT,
+      data: {
+        ...MEMORY_PAGE_CONTEXT.data,
+        active_filter: activeFilter,
+        total_memories: allMemories.length,
+      },
+    });
+  }, [activeFilter, allMemories.length, setPageContext]);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -21,7 +21,34 @@ export const initializeDefaultSkillsForAssistant = async (
   });
 
   if (existingSkills.length > 0) {
-    return existingSkills;
+    const existingSkillNames = new Set(existingSkills.map((skill) => skill.name));
+    const missingDefaults = DEFAULT_SKILLS.filter((skill) => !existingSkillNames.has(skill.name));
+
+    if (missingDefaults.length === 0) {
+      return existingSkills;
+    }
+
+    const maxSortOrder = existingSkills.reduce(
+      (max, skill) => Math.max(max, skill.sortOrder),
+      -1
+    );
+
+    await prisma.skill.createMany({
+      data: missingDefaults.map((skill, index) => ({
+        id: randomUUID(),
+        userId,
+        name: skill.name,
+        icon: skill.icon,
+        systemPrompt: skill.systemPrompt,
+        isActive: true,
+        sortOrder: maxSortOrder + index + 1,
+      })),
+    });
+
+    return prisma.skill.findMany({
+      where: { userId },
+      orderBy: DEFAULT_ORDER_BY,
+    });
   }
 
   await prisma.skill.createMany({

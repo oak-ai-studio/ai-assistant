@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,12 +12,15 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
+import { NOTE_CREATE_PAGE_CONTEXT } from '@/constants/page-context';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
 const TITLE_MAX_LENGTH = 40;
 const CONTENT_MAX_LENGTH = 1000;
 
 export default function CreateNoteScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
   const queryClient = useQueryClient();
   const { user, status } = useAuth();
   const userId = user?.id ?? '';
@@ -25,6 +28,17 @@ export default function CreateNoteScreen() {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+
+  useEffect(() => {
+    setPageContext({
+      ...NOTE_CREATE_PAGE_CONTEXT,
+      data: {
+        ...NOTE_CREATE_PAGE_CONTEXT.data,
+        draft_title_length: title.trim().length,
+        draft_content_length: content.trim().length,
+      },
+    });
+  }, [content, setPageContext, title]);
 
   const createMutation = useMutation({
     mutationFn: (payload: { title?: string; content: string }) =>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { MemoryType } from '@ai-assistant/shared';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,9 +15,12 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
+import { MEMORY_CREATE_PAGE_CONTEXT } from '@/constants/page-context';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
 export default function CreateMemoryScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
   const queryClient = useQueryClient();
   const { user, status } = useAuth();
   const userId = user?.id ?? '';
@@ -25,6 +28,17 @@ export default function CreateMemoryScreen() {
 
   const [content, setContent] = useState('');
   const [type, setType] = useState<MemoryType>('preference');
+
+  useEffect(() => {
+    setPageContext({
+      ...MEMORY_CREATE_PAGE_CONTEXT,
+      data: {
+        ...MEMORY_CREATE_PAGE_CONTEXT.data,
+        memory_type: type,
+        draft_content_length: content.trim().length,
+      },
+    });
+  }, [content, setPageContext, type]);
 
   const createMutation = useMutation({
     mutationFn: (payload: { content: string; type: MemoryType }) =>

@@ -22,9 +22,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
 import type { NoteListItem } from '@/constants/notes';
+import { NOTES_LIST_PAGE_CONTEXT } from '@/constants/page-context';
+import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 
 export default function NotesScreen() {
   const router = useRouter();
+  const { setPageContext } = useGlobalChat();
   const { user, status } = useAuth();
   const userId = user?.id ?? '';
   const { toast, showToast, hideToast } = useToast();
@@ -49,6 +52,17 @@ export default function NotesScreen() {
 
   const isInitialLoading = status === 'loading' || (notesQuery.isLoading && !notesQuery.data);
   const isRefreshing = !isInitialLoading && notesQuery.isRefetching;
+
+  useEffect(() => {
+    setPageContext({
+      ...NOTES_LIST_PAGE_CONTEXT,
+      data: {
+        ...NOTES_LIST_PAGE_CONTEXT.data,
+        total_notes: total,
+        has_notes: total > 0,
+      },
+    });
+  }, [setPageContext, total]);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -161,19 +161,36 @@ export default function HomeScreen() {
   }, [localActiveSkills]);
 
   const displaySkills = useMemo(() => {
-    if (skills.length > 0) {
-      return skills;
+    const mergedById = new Map<string, SkillCardItem>();
+    for (const skill of skills) {
+      mergedById.set(skill.id, skill);
+    }
+    for (const skill of fallbackSkills) {
+      if (!mergedById.has(skill.id)) {
+        mergedById.set(skill.id, skill);
+      }
     }
 
-    if (fallbackSkills.length > 0) {
-      return fallbackSkills;
-    }
+    const localOrderSkills =
+      localActiveSkills.length > 0
+        ? localActiveSkills
+            .map((skillId) => mergedById.get(skillId))
+            .filter((skill): skill is SkillCardItem => Boolean(skill))
+        : [];
 
-    return [];
-  }, [fallbackSkills, skills]);
+    const localOrderSet = new Set(localOrderSkills.map((skill) => skill.id));
+    const remainingSkills = [...mergedById.values()].filter(
+      (skill) => !localOrderSet.has(skill.id)
+    );
+    const mergedSkills = [...localOrderSkills, ...remainingSkills];
+
+    return isEmptyState
+      ? mergedSkills.filter((skill) => skill.id === 'chat')
+      : mergedSkills;
+  }, [fallbackSkills, isEmptyState, localActiveSkills, skills]);
 
   const onRouteFromMenu = (
-    route: '/settings/assistant' | '/(tabs)/memory' | '/(tabs)/notes',
+    route: '/settings/assistant' | '/(tabs)/memory',
   ) => {
     setSettingsVisible(false);
     setLegacyMenuVisible(false);
@@ -293,6 +310,11 @@ export default function HomeScreen() {
       return;
     }
 
+    if (skillId === 'notes' || skillId === 'note') {
+      router.push('/(tabs)/notes' as never);
+      return;
+    }
+
     openChat();
   };
 
@@ -311,11 +333,6 @@ export default function HomeScreen() {
             key: 'memory',
             label: '记忆',
             onPress: () => onRouteFromMenu('/(tabs)/memory'),
-          },
-          {
-            key: 'notes',
-            label: '笔记',
-            onPress: () => onRouteFromMenu('/(tabs)/notes'),
           },
           {
             key: 'signout',

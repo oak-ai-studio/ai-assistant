@@ -1,5 +1,5 @@
 export type DefaultSkill = {
-  id: 'english_learning' | 'cooking' | 'chat';
+  id: 'english_learning' | 'cooking' | 'chat' | 'notes';
   name: string;
   icon: string;
   systemPrompt: string;
@@ -27,5 +27,12 @@ export const DEFAULT_SKILLS: ReadonlyArray<DefaultSkill> = [
     icon: 'chat',
     systemPrompt: '你是用户的朋友，可以自然聊天，保持真诚、温和并结合用户偏好回应。',
     sortOrder: 2,
+  },
+  {
+    id: 'notes',
+    name: '笔记',
+    icon: 'notes',
+    systemPrompt: '你是一个笔记助手，帮助用户快速记录、整理与回顾笔记内容。',
+    sortOrder: 3,
   },
 ];
