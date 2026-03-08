@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MotiView } from 'moti';
 import { Button } from '@/components/ui/Button';
 import {
@@ -101,6 +101,7 @@ const uniqueSkillOrder = (ids: AssistantSkillId[]) => {
 
 export default function AssistantSettingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
   const userId = user?.id ?? '';
   const {
@@ -322,6 +323,10 @@ export default function AssistantSettingsScreen() {
             })),
           });
         }
+
+        // Force-refresh skills cache so Home screen renders latest toggles/order immediately.
+        await queryClient.invalidateQueries({ queryKey: ['skills', 'list', userId] });
+        await queryClient.refetchQueries({ queryKey: ['skills', 'list', userId], type: 'active' });
       }
 
       if (!hasNewSkills) {
