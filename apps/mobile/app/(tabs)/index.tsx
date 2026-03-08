@@ -28,7 +28,7 @@ import { TopRightMenu } from '@/components/TopRightMenu';
 import { useGlobalChat } from '@/components/chat/ChatOverlayProvider';
 import { ASSISTANT_SKILLS, type AssistantSkillId } from '@/constants/assistant-config';
 import { listSkills } from '@/utils/api';
-import { resolveSkillIcon, SKILL_SUBTITLE_MAP } from '@/utils/skills';
+import { mapBackendSkillToAssistant, resolveSkillIcon, SKILL_SUBTITLE_MAP } from '@/utils/skills';
 import { getAssistantSettings } from '@/utils/assistant-settings';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -124,12 +124,17 @@ export default function HomeScreen() {
     const activeSkills = source
       .filter((skill) => skill.isActive)
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((skill) => ({
-        id: skill.id,
+      .map((skill) => {
+        const mappedId = mapBackendSkillToAssistant(skill);
+        const normalizedSkillId = mappedId ?? skill.id;
+
+        return {
+          id: normalizedSkillId,
         name: skill.name,
-        icon: resolveSkillIcon(skill.id, skill.icon),
-        subtitle: SKILL_SUBTITLE_MAP[skill.id] ?? '开始使用这个技能',
-      }));
+          icon: resolveSkillIcon(normalizedSkillId, skill.icon),
+          subtitle: SKILL_SUBTITLE_MAP[normalizedSkillId] ?? '开始使用这个技能',
+        };
+      });
 
     if (isEmptyState) {
       return activeSkills.filter((skill) => skill.id === 'chat');
