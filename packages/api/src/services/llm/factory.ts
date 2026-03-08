@@ -26,7 +26,7 @@ export function createChatLLMProvider(options?: {
   if (provider === 'anthropic') {
     return new AnthropicChatProvider({
       apiKey: options?.anthropicApiKey ?? getEnv('ANTHROPIC_API_KEY'),
-      model: options?.model,
+      model: options?.model ?? getEnv('ANTHROPIC_MODEL') ?? getEnv('OPENAI_MODEL'),
       timeoutMs: options?.timeoutMs,
       baseURL: options?.baseURL ?? getEnv('LLM_BASE_URL'),
     });

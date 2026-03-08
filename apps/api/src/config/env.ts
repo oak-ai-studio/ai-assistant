@@ -10,6 +10,7 @@ const envSchema = z.object({
   LLM_PROVIDER: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
   LLM_BASE_URL: z.string().url().optional(),
   OPENAI_MODEL: z.string().optional(),
+  ANTHROPIC_MODEL: z.string().optional(),
   MEMORY_RECALL_ENABLED: z.string().optional(),
   MEMORY_RECALL_MAX_ITEMS: z.string().optional(),
   MEMORY_RECALL_MIN_CONFIDENCE: z.string().optional(),
