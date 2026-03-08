@@ -25,15 +25,16 @@ import {
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
-import { useUserId } from '@/utils/userId';
 
 export default function EditMemoryScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const queryClient = useQueryClient();
-  const { userId } = useUserId();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const { toast, showToast, hideToast } = useToast();
 
   const memoryId = useMemo(() => {
@@ -62,7 +63,7 @@ export default function EditMemoryScreen() {
         return cachedMemory;
       }
 
-      const result = await trpcClient.memory.list.query({ userId, limit: 200 });
+      const result = await trpcClient.memory.list.query({ userId, limit: 100 });
       return (result.memories as MemoryListItem[]).find((item) => item.id === memoryId) ?? null;
     },
     enabled: userId.length > 0 && memoryId.length > 0,

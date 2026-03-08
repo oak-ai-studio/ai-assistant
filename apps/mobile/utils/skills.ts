@@ -3,13 +3,6 @@ import type { AssistantSkillId } from '@/constants/assistant-config';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const FRONTEND_TO_BACKEND_SKILL_ID: Record<AssistantSkillId, string> = {
-  vocab: 'english_learning',
-  chat: 'chat',
-  cooking: 'cooking',
-  news: 'news',
-};
-
 const BACKEND_TO_FRONTEND_SKILL_ID: Record<string, AssistantSkillId> = {
   vocab: 'vocab',
   vocabulary: 'vocab',
@@ -17,6 +10,13 @@ const BACKEND_TO_FRONTEND_SKILL_ID: Record<string, AssistantSkillId> = {
   chat: 'chat',
   cooking: 'cooking',
   news: 'news',
+};
+
+const BACKEND_NAME_TO_FRONTEND_SKILL_ID: Record<string, AssistantSkillId> = {
+  '背单词': 'vocab',
+  '随便聊聊': 'chat',
+  '做饭助理': 'cooking',
+  '看新闻': 'news',
 };
 
 const SKILL_ICON_MAP: Record<string, IoniconName> = {
@@ -36,11 +36,12 @@ export const SKILL_SUBTITLE_MAP: Record<string, string> = {
   news: '快速查看重点资讯',
 };
 
-export const mapAssistantSkillIdToBackend = (skillId: AssistantSkillId): string =>
-  FRONTEND_TO_BACKEND_SKILL_ID[skillId];
-
-export const mapBackendSkillIdToAssistant = (skillId: string): AssistantSkillId | null =>
-  BACKEND_TO_FRONTEND_SKILL_ID[skillId] ?? null;
+export const mapBackendSkillToAssistant = (
+  skill: { id: string; name: string }
+): AssistantSkillId | null =>
+  BACKEND_TO_FRONTEND_SKILL_ID[skill.id] ??
+  BACKEND_NAME_TO_FRONTEND_SKILL_ID[skill.name] ??
+  null;
 
 export const resolveSkillIcon = (backendSkillId: string, icon?: string): IoniconName => {
   if (icon && icon in SKILL_ICON_MAP) {

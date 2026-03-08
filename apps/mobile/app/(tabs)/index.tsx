@@ -30,7 +30,6 @@ import { ASSISTANT_SKILLS, type AssistantSkillId } from '@/constants/assistant-c
 import { listSkills } from '@/utils/api';
 import { resolveSkillIcon, SKILL_SUBTITLE_MAP } from '@/utils/skills';
 import { getAssistantSettings } from '@/utils/assistant-settings';
-import { useUserId } from '@/utils/userId';
 import { useAuth } from '@/hooks/useAuth';
 
 type Reminder = {
@@ -98,8 +97,9 @@ export default function HomeScreen() {
     chat?: string;
   }>();
   const { closeChat, openChat, openChatWithPreset, setPageContext } = useGlobalChat();
-  const { signOut } = useAuth();
-  const { userId, isLoading: userIdLoading } = useUserId();
+  const { user, status, signOut } = useAuth();
+  const userId = user?.id ?? '';
+  const userIdLoading = status === 'loading';
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [legacyMenuVisible, setLegacyMenuVisible] = useState(false);

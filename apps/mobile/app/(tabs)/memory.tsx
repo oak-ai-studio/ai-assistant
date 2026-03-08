@@ -24,28 +24,23 @@ import {
 import { colors, radius } from '@/constants/tokens';
 import { typography } from '@/constants/typography';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/utils/error';
 import { trpcClient } from '@/utils/trpc';
-import { useUserId } from '@/utils/userId';
 
 export default function MemoryScreen() {
   const router = useRouter();
-  const { userId, isLoading: userIdLoading, error: userIdError } = useUserId();
+  const { user, status } = useAuth();
+  const userId = user?.id ?? '';
   const { toast, showToast, hideToast } = useToast();
 
   const [activeFilter, setActiveFilter] = useState<MemoryFilter>('all');
 
   const memoryQuery = useQuery({
     queryKey: ['memory', 'list', userId],
-    queryFn: () => trpcClient.memory.list.query({ userId, limit: 200 }),
+    queryFn: () => trpcClient.memory.list.query({ userId, limit: 100 }),
     enabled: userId.length > 0,
   });
-
-  useEffect(() => {
-    if (userIdError) {
-      showToast(userIdError);
-    }
-  }, [showToast, userIdError]);
 
   useEffect(() => {
     if (memoryQuery.error) {
@@ -64,7 +59,7 @@ export default function MemoryScreen() {
     [activeFilter, allMemories],
   );
 
-  const isInitialLoading = userIdLoading || (memoryQuery.isLoading && !memoryQuery.data);
+  const isInitialLoading = status === 'loading' || (memoryQuery.isLoading && !memoryQuery.data);
   const isRefreshing = !isInitialLoading && memoryQuery.isRefetching;
 
   const emptyDescription =
