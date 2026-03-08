@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -178,10 +179,27 @@ export default function HomeScreen() {
   };
 
   const handleSignOut = async () => {
-    setSettingsVisible(false);
-    setLegacyMenuVisible(false);
-    await signOut();
-    router.replace('/(onboarding)');
+    Alert.alert(
+      '退出登录',
+      '确定要退出登录吗？',
+      [
+        {
+          text: '取消',
+          style: 'cancel',
+        },
+        {
+          text: '退出登录',
+          style: 'destructive',
+          onPress: async () => {
+            setSettingsVisible(false);
+            setLegacyMenuVisible(false);
+            await signOut();
+            router.replace('/(onboarding)');
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   useEffect(() => {
