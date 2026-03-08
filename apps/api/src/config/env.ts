@@ -9,6 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   LLM_PROVIDER: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
   LLM_BASE_URL: z.string().url().optional(),
+  OPENAI_MODEL: z.string().optional(),
   OPENAI_API_KEY: z.string().default(''),
   ANTHROPIC_API_KEY: z.string().default(''),
   GEMINI_API_KEY: z.string().default(''),

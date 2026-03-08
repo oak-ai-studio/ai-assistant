@@ -27,7 +27,7 @@ export function createChatLLMProvider(options?: {
 
   return new OpenAIChatProvider({
     apiKey: options?.openAIApiKey ?? getEnv('OPENAI_API_KEY'),
-    model: options?.model,
+    model: options?.model ?? getEnv('OPENAI_MODEL'),
     timeoutMs: options?.timeoutMs,
     baseURL: getBaseURL(provider, options?.baseURL ?? getEnv('LLM_BASE_URL')),
   });
