@@ -172,7 +172,9 @@ export default function HomeScreen() {
     return [];
   }, [fallbackSkills, skills]);
 
-  const onRouteFromMenu = (route: '/settings/assistant' | '/(tabs)/memory') => {
+  const onRouteFromMenu = (
+    route: '/settings/assistant' | '/(tabs)/memory' | '/(tabs)/notes',
+  ) => {
     setSettingsVisible(false);
     setLegacyMenuVisible(false);
     router.push(route);
@@ -309,6 +311,11 @@ export default function HomeScreen() {
             key: 'memory',
             label: '记忆',
             onPress: () => onRouteFromMenu('/(tabs)/memory'),
+          },
+          {
+            key: 'notes',
+            label: '笔记',
+            onPress: () => onRouteFromMenu('/(tabs)/notes'),
           },
           {
             key: 'signout',

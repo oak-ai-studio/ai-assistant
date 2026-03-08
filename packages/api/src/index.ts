@@ -2,6 +2,7 @@ import { assistantRouter } from './routers/assistant';
 import { authRouter } from './routers/auth';
 import { chatRouter } from './routers/chat';
 import { memoryRouter } from './routers/memory';
+import { notesRouter } from './routers/notes';
 import { pushRouter } from './routers/push';
 import { skillsRouter } from './routers/skills';
 import { userRouter } from './routers/user';
@@ -13,6 +14,7 @@ export const appRouter = router({
   assistant: assistantRouter,
   chat: chatRouter,
   memory: memoryRouter,
+  notes: notesRouter,
   skills: skillsRouter,
   skill: skillsRouter,
   push: pushRouter,
