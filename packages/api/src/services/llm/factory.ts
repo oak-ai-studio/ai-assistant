@@ -17,6 +17,7 @@ export function createChatLLMProvider(options?: {
   openAIApiKey?: string;
   model?: string;
   timeoutMs?: number;
+  baseURL?: string;
 }): ChatLLMProvider {
   const provider = (options?.provider ?? getEnv('LLM_PROVIDER') ?? 'openai').toLowerCase();
 
@@ -28,5 +29,18 @@ export function createChatLLMProvider(options?: {
     apiKey: options?.openAIApiKey ?? getEnv('OPENAI_API_KEY'),
     model: options?.model,
     timeoutMs: options?.timeoutMs,
+    baseURL: getBaseURL(provider, options?.baseURL ?? getEnv('LLM_BASE_URL')),
   });
+}
+
+function getBaseURL(provider: string, envBaseURL?: string): string | undefined {
+  if (envBaseURL) {
+    return envBaseURL;
+  }
+
+  if (provider === 'anthropic') {
+    return 'https://api.anthropic.com';
+  }
+
+  return 'https://api.openai.com/v1';
 }

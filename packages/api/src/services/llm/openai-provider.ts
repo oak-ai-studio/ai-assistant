@@ -33,7 +33,13 @@ export class OpenAIChatProvider implements ChatLLMProvider {
   private readonly model: string;
   private readonly timeoutMs: number;
 
-  constructor(options: { apiKey?: string; model?: string; timeoutMs?: number; client?: OpenAIClient }) {
+  constructor(options: {
+    apiKey?: string;
+    model?: string;
+    timeoutMs?: number;
+    baseURL?: string;
+    client?: OpenAIClient;
+  }) {
     if (!options.client && !options.apiKey) {
       throw new LLMProviderError('CONFIG_ERROR', 'Missing OPENAI_API_KEY for OpenAI provider.');
     }
@@ -42,6 +48,7 @@ export class OpenAIChatProvider implements ChatLLMProvider {
       options.client ??
       new OpenAI({
         apiKey: options.apiKey,
+        baseURL: options.baseURL,
       });
     this.model = options.model ?? DEFAULT_MODEL;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
