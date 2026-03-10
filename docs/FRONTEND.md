@@ -44,6 +44,16 @@ React Native + Expo 前端开发规范。
 
 ---
 
+## 后端枚举/字段同步约束
+
+- UI 常量必须以 `packages/shared` 中的类型为唯一来源，不允许自定义新增值
+- 当后端枚举/字段变更时，必须同步更新：
+  - `apps/mobile/constants` 的映射与筛选项
+  - 相关页面、组件与测试
+- 需要分组展示时，使用 `Record<SharedEnum, Meta>` 的映射，不要重新定义字符串 union
+
+---
+
 ## 目录结构
 
 ```

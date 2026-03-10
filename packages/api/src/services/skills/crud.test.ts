@@ -10,13 +10,14 @@ import {
 
 const buildSkill = (overrides: Partial<SkillRecord> = {}): SkillRecord => ({
   id: 'skill-1',
-  assistantId: 'assistant-1',
+  userId: 'user-1',
   name: '背单词',
   icon: 'book',
   systemPrompt: 'prompt',
   isActive: true,
-  order: 0,
+  sortOrder: 0,
   createdAt: new Date('2026-03-07T00:00:00.000Z'),
+  updatedAt: new Date('2026-03-07T00:00:00.000Z'),
   ...overrides,
 });
 
@@ -58,10 +59,10 @@ describe('skills crud service', () => {
     expect(result).toEqual(skills);
     expect(findMany).toHaveBeenCalledWith({
       where: {
-        assistant: { userId: 'user-1' },
+        userId: 'user-1',
         isActive: true,
       },
-      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
   });
 
@@ -75,14 +76,14 @@ describe('skills crud service', () => {
     expect(findFirst).toHaveBeenCalledWith({
       where: {
         id: 'skill-1',
-        assistant: { userId: 'user-1' },
+        userId: 'user-1',
       },
     });
   });
 
-  it('updates provided fields and maps sortOrder to order', async () => {
+  it('updates provided fields and respects sortOrder', async () => {
     const existing = buildSkill();
-    const updatedSkill = buildSkill({ name: '英语学习', order: 3, isActive: false });
+    const updatedSkill = buildSkill({ name: '英语学习', sortOrder: 3, isActive: false });
     findFirst.mockResolvedValue(existing);
     update.mockResolvedValue(updatedSkill);
 
@@ -100,7 +101,7 @@ describe('skills crud service', () => {
       data: {
         name: '英语学习',
         isActive: false,
-        order: 3,
+        sortOrder: 3,
       },
     });
   });
@@ -119,11 +120,11 @@ describe('skills crud service', () => {
   });
 
   it('reorders skills in a transaction and returns sorted result', async () => {
-    const first = buildSkill({ id: 'skill-1', order: 1 });
-    const second = buildSkill({ id: 'skill-2', order: 0 });
+    const first = buildSkill({ id: 'skill-1', sortOrder: 1 });
+    const second = buildSkill({ id: 'skill-2', sortOrder: 0 });
     const reordered = [
-      buildSkill({ id: 'skill-2', order: 0 }),
-      buildSkill({ id: 'skill-1', order: 1 }),
+      buildSkill({ id: 'skill-2', sortOrder: 0 }),
+      buildSkill({ id: 'skill-1', sortOrder: 1 }),
     ];
 
     findMany.mockResolvedValueOnce([first, second]).mockResolvedValueOnce(reordered);
@@ -140,11 +141,11 @@ describe('skills crud service', () => {
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenNthCalledWith(1, {
       where: { id: 'skill-1' },
-      data: { order: 1 },
+      data: { sortOrder: 1 },
     });
     expect(update).toHaveBeenNthCalledWith(2, {
       where: { id: 'skill-2' },
-      data: { order: 0 },
+      data: { sortOrder: 0 },
     });
   });
 

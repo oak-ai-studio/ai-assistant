@@ -114,6 +114,8 @@ npm run build
 4. **Agent 可读性优先**
    - 文档结构化、模块化
    - 避免模糊描述，提供具体示例
+5. **Schema/枚举变更同步**
+   - 必须遵循 `docs/BACKEND.md` 与 `docs/FRONTEND.md` 的同步检查清单
 
 ---
 

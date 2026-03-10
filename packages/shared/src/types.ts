@@ -1,9 +1,7 @@
 export type MemoryType =
   | 'preference'
-  | 'fact'
-  | 'experience'
-  | 'other'
   | 'habit'
+  | 'fact'
   | 'weakness'
   | 'progress'
   | 'personality';
