@@ -46,6 +46,15 @@ packages/
 
 ## Prisma Schema
 
+## Schema/Enum 变更检查清单
+
+- 修改 `packages/db/prisma/schema.prisma` 后，必须同步更新：
+  - `packages/shared/src/types.ts`（共享类型/枚举）
+  - `packages/api` 相关 service + test（字段/枚举使用处）
+  - `apps/mobile` 常量/筛选项（若前端依赖该枚举）
+- 字段或枚举有新增/删除/重命名时，必须全仓搜索并逐处更新
+- 提交前至少通过 `npm run build`，避免未构建包导致入口缺失
+
 ### 核心实体
 
 ```prisma
