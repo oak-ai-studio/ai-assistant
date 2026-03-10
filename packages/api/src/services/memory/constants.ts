@@ -2,10 +2,8 @@ import type { MemoryType } from '@ai-assistant/shared';
 
 export const memoryTypeValues: [MemoryType, ...MemoryType[]] = [
   'preference',
-  'fact',
-  'experience',
-  'other',
   'habit',
+  'fact',
   'weakness',
   'progress',
   'personality',
